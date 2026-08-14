@@ -253,7 +253,17 @@
 
     return state;
   }
-  function save(state){ localStorage.setItem(storeKey, JSON.stringify(state)); }
+  let autoSyncEnabled = false;
+  let autoSyncTimer = null;
+  let localChangesPending = false;
+
+  function save(state){
+    localStorage.setItem(storeKey, JSON.stringify(state));
+    if(autoSyncEnabled){
+      localChangesPending = true;
+      scheduleAutoSync();
+    }
+  }
 
   function normalizedName(name){ return (name||'').trim().replace(/\s+/g,' '); }
   function existsByName(state, name){
@@ -1211,9 +1221,10 @@ function exportBoardPNG(){
 
   // —— Google Sheet 云同步
   const GOOGLE_SCRIPT_URL_KEY = 'invite_manager_google_script_url';
+  const DEFAULT_GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMFQf63WaCWHGHMFWNIwab7Qda0cGupq4Q3upB5hS3ake43Xpe3K3Wkqka2vGh6Q-gTw/exec';
 
   function getGoogleScriptUrl(){
-    return (localStorage.getItem(GOOGLE_SCRIPT_URL_KEY) || '').trim();
+    return (localStorage.getItem(GOOGLE_SCRIPT_URL_KEY) || DEFAULT_GOOGLE_SCRIPT_URL).trim();
   }
 
   function setSyncStatus(msg){
@@ -1235,7 +1246,13 @@ function exportBoardPNG(){
     setSyncStatus('Google 同步已设置');
   }
 
-  async function syncToGoogleSheet(){
+  function scheduleAutoSync(){
+    clearTimeout(autoSyncTimer);
+    setSyncStatus('等待自动同步…');
+    autoSyncTimer = setTimeout(()=>syncToGoogleSheet(true), 700);
+  }
+
+  async function syncToGoogleSheet(silent=false){
     const url = getGoogleScriptUrl();
     if(!url){ alert('请先点击“设置 Google 同步”，粘贴 Apps Script Web App URL。'); return; }
     setSyncStatus('正在同步…');
@@ -1255,18 +1272,20 @@ function exportBoardPNG(){
       const data = await res.json();
       if(!data || !data.ok) throw new Error((data && data.error) || '同步失败');
       setSyncStatus('已同步 ' + new Date().toLocaleTimeString());
-      alert('已同步到 Google Sheet');
+      localChangesPending = false;
+      if(!silent) alert('已同步到 Google Sheet');
     }catch(err){
       console.error(err);
       setSyncStatus('同步失败');
-      alert('同步失败：' + err.message + '\n\n请确认 Apps Script 已部署为 Web App，并允许访问。');
+      if(!silent) alert('同步失败：' + err.message + '\n\n请确认 Apps Script 已部署为 Web App，并允许访问。');
     }
   }
 
-  async function loadFromGoogleSheet(){
+  async function loadFromGoogleSheet(silent=false){
     const url = getGoogleScriptUrl();
     if(!url){ alert('请先点击“设置 Google 同步”，粘贴 Apps Script Web App URL。'); return; }
-    if(!confirm('从 Google Sheet 读取会覆盖当前浏览器里的实时名单。继续吗？')) return;
+    if(!silent && !confirm('从 Google Sheet 读取会覆盖当前浏览器里的实时名单。继续吗？')) return;
+    if(silent && localChangesPending) return;
     setSyncStatus('正在读取…');
     try{
       const sep = url.includes('?') ? '&' : '?';
@@ -1276,15 +1295,25 @@ function exportBoardPNG(){
       if(!data.state) throw new Error('Google Sheet 中还没有云端数据');
       const state = data.state;
       if(!state.people || !state.statuses || !Array.isArray(state.history)) throw new Error('云端数据格式不正确');
-      save(state);
+      localStorage.setItem(storeKey, JSON.stringify(state));
       render();
       setSyncStatus('已读取 ' + new Date().toLocaleTimeString());
-      alert('已从 Google Sheet 读取');
+      if(!silent) alert('已从 Google Sheet 读取');
     }catch(err){
       console.error(err);
       setSyncStatus('读取失败');
-      alert('读取失败：' + err.message);
+      if(!silent) alert('读取失败：' + err.message);
     }
+  }
+
+  async function startAutomaticGoogleSync(){
+    setSyncStatus('正在读取云端数据…');
+    await loadFromGoogleSheet(true);
+    autoSyncEnabled = true;
+    setInterval(()=>loadFromGoogleSheet(true), 30000);
+    document.addEventListener('visibilitychange', ()=>{
+      if(!document.hidden) loadFromGoogleSheet(true);
+    });
   }
 
   // —— 事件绑定
@@ -1314,13 +1343,20 @@ function exportBoardPNG(){
   $('#downloadSelfBtn').addEventListener('click', downloadSelf);
   document.getElementById('pngBtn')?.addEventListener('click', exportBoardPNG);
   document.getElementById('googleSetupBtn')?.addEventListener('click', setupGoogleSync);
-  document.getElementById('googleSaveBtn')?.addEventListener('click', syncToGoogleSheet);
-  document.getElementById('googleLoadBtn')?.addEventListener('click', loadFromGoogleSheet);
+  document.getElementById('googleSaveBtn')?.addEventListener('click', ()=>syncToGoogleSheet(false));
+  document.getElementById('googleLoadBtn')?.addEventListener('click', ()=>loadFromGoogleSheet(false));
+  $('#weekNote')?.addEventListener('input', ()=>{
+    const state = load();
+    const weekISO = $('#weekDate').value || nextSunday();
+    state.notes = state.notes || {};
+    state.notes[weekISO] = $('#weekNote').value || '';
+    save(state);
+  });
 
   // —— 初始化
   $('#weekDate').value = nextSunday();
   render();
-  if(getGoogleScriptUrl()) setSyncStatus('Google 同步已设置');
+  startAutomaticGoogleSync();
 })();
 </script>
 </body>
