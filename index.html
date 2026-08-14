@@ -1310,10 +1310,6 @@ function exportBoardPNG(){
     setSyncStatus('正在读取云端数据…');
     await loadFromGoogleSheet(true);
     autoSyncEnabled = true;
-    setInterval(()=>loadFromGoogleSheet(true), 30000);
-    document.addEventListener('visibilitychange', ()=>{
-      if(!document.hidden) loadFromGoogleSheet(true);
-    });
   }
 
   // —— 事件绑定
