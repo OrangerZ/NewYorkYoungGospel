@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>周日下午邀请管理器（v2.9）</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"; margin: 0; background: #f7f7f8;}
+  header { background: linear-gradient(135deg,#111 0%, #1f1f23 60%, #2d2d34 100%); color: #fff; padding: 14px 18px; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+  header h1 { margin: 0; font-size: 20px; }
+  main { padding: 16px; max-width: 1100px; margin: 0 auto;}
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;}
+  .toolbar input[type="text"], .toolbar input[type="date"]{ padding: 8px 10px; border: 1px solid #ccc; border-radius: 10px; outline: none; }
+  .toolbar button { padding: 8px 12px; border: 1px solid #ccc; background: #fff; border-radius: 10px; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease, background .12s ease;}
+  .toolbar button:hover { background: #f0f0f0; transform: translateY(-1px); box-shadow: 0 6px 14px rgba(0,0,0,.06); }
+  .columns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .col { background: #fff; border: 1px solid #e6e6e6; border-radius: 12px; min-height: 320px; display: flex; flex-direction: column; box-shadow: 0 4px 18px rgba(0,0,0,.04); transition: box-shadow .15s ease, transform .12s ease; }
+  .col:hover{ box-shadow: 0 8px 26px rgba(0,0,0,.06); transform: translateY(-1px); }
+  .col h3 { margin: 0; padding: 10px 12px; border-bottom: 2px solid #eee; font-size: 15px; display: flex; justify-content: space-between; align-items: center;}
+  .count { font-weight: 600; color: #555; font-size: 13px; padding: 2px 8px; border-radius: 999px; background:#f3f4f6; border:1px solid #e9e9ee; }
+  .list { flex: 1; padding: 10px; display: grid; grid-auto-rows: min-content; gap: 8px; }
+  .item { background: #fafafa; border: 1px solid #e9e9e9; border-radius: 12px; padding: 8px 10px; cursor: grab; user-select: none; display: flex; justify-content: space-between; align-items: center; position: relative; transition: transform .12s ease, box-shadow .12s ease, background .12s ease; }
+  .item:hover{ transform: translateY(-1px); box-shadow: 0 6px 14px rgba(0,0,0,.06); background:#fff; }
+  .item.dragging { opacity: 0.6; transform: rotate(-1deg) scale(.98); }
+  .drop-hint{ outline: 2px dashed #bbb; outline-offset: -6px; }
+  .item .name { font-weight: 600; }
+  .item .actions { display: flex; gap: 6px; }
+  .chip { font-size: 11px; padding: 2px 6px; border-radius: 6px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+  .empty { color: #999; font-size: 13px; text-align: center; padding: 12px;}
+  .small { font-size: 12px; color: #666; }
+  footer { padding: 12px 16px; color: #888; font-size: 12px; text-align: center;}
+  .bulk { display:none; background: #fff; border: 1px dashed #ccc; border-radius: 10px; padding: 10px; margin-bottom: 12px;}
+  .bulk textarea { width: 100%; min-height: 120px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+  .muted { color: #777; font-size: 12px; }
+
+  /* 列标题彩条 */
+  :root{ --pool:#6aa5ff; --yes:#35c28d; --maybe:#f7b84b; --no:#ef5b6b; }
+  .col[data-status="pool"] h3{ border-bottom-color: var(--pool); }
+  .col[data-status="yes"] h3{ border-bottom-color: var(--yes); }
+  .col[data-status="maybe"] h3{ border-bottom-color: var(--maybe); }
+  .col[data-status="no"] h3{ border-bottom-color: var(--no); }
+  #list-pool  .item::before{ background: var(--pool); }
+  #list-yes   .item::before{ background: var(--yes); }
+  #list-maybe .item::before{ background: var(--maybe); }
+  #list-no    .item::before{ background: var(--no); }
+  .item::before{ content:""; position:absolute; left:-1px; top:-1px; bottom:-1px; width:6px; border-radius:12px 0 0 12px; opacity:.6; }
+
+  /* 历史面板 */
+  .history-panel{
+    background:#fff; border:1px solid #e6e6e6; border-radius:12px; padding:12px; margin-top:14px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.04);
+  }
+
+  /* 备注 */
+  .note-wrap{ display:flex; gap:8px; align-items:center; margin: 8px 0 12px; }
+  #weekNote{ flex:1; min-height: 40px; padding:8px 10px; border:1px solid #ccc; border-radius:10px; }
+
+  /* 下方分类（弟兄姊妹 / 福音朋友） */
+  .bottom-panel{
+    background:#fff; border:1px solid #e6e6e6; border-radius:12px; padding:12px; margin-top:14px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.04);
+  }
+  .bottom-rows{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  .bcol{ border: 1px dashed #e0e0e0; border-radius:10px; padding:10px; min-height:84px; }
+  .bcol h4{ margin:0 0 8px 0; font-size:14px; display:flex; align-items:center; gap:8px;}
+  .bcount{ font-size:12px; color:#666;}
+  .blist{ display:flex; flex-wrap:wrap; gap:8px; min-height: 40px; }
+  .btag{ font-size:12px; line-height:1; padding:6px 8px; border-radius:999px; background:#f5f7fb; border:1px solid #e6e6e6; user-select:none; cursor:grab; }
+  .btag.dragging{ opacity:.6; transform: scale(.98); }
+  .blist.drop-hint{ outline:2px dashed #c7d2fe; outline-offset:-6px; }
+  .bcol[data-bcat="member"] .btag{ background:#eefbf5; border-color:#d7f3e6; }
+  .bcol[data-bcat="friend"] .btag{ background:#f7f7ff; border-color:#e4e6ff; }
+
+  @media (max-width: 900px){ .columns { grid-template-columns: repeat(2, 1fr);} }
+  @media (max-width: 560px){ .columns { grid-template-columns: 1fr;} }
+  @media (max-width: 720px){ .bottom-rows{ grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>周日下午邀请管理器（v2.9）</h1>
+</header>
+<main>
+  <div class="toolbar">
+    <input id="newName" type="text" placeholder="添加人员姓名…">
+    <button id="addBtn">添加人员</button>
+    <button id="toggleBulkBtn">批量添加</button>
+    <span class="small">本周（周日）日期：</span>
+    <input id="weekDate" type="date">
+    <button id="saveWeekBtn">保存本周记录</button>
+    <button id="resetBtn">一键重置到“邀请”</button>
+    <button id="useLastWeekBtn">沿用上周名单（不删现有）</button>
+    <button id="overwriteWithLastBtn">用上周名单覆盖（会删多余）</button>
+    <button id="exportBtn">导出JSON</button>
+    <input id="importFile" type="file" accept=".json" style="display:none">
+    <button id="importBtn">导入JSON</button>
+    <button id="downloadSelfBtn">下载本程序HTML</button>
+    <button id="pngBtn">导出看板PNG</button>
+    <button id="googleSetupBtn">设置 Google 同步</button>
+    <button id="googleSaveBtn">同步到 Google Sheet</button>
+    <button id="googleLoadBtn">从 Google Sheet 读取</button>
+    <span id="googleSyncStatus" class="small"></span>
+  </div>
+
+  <div id="bulkBox" class="bulk">
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+      <strong>批量添加</strong>
+      <span class="muted">支持换行、逗号、顿号、分号分隔；默认去重（不区分大小写，忽略空格）。</span>
+    </div>
+    <textarea id="bulkInput" placeholder="示例：
+张三
+李四, 王五；赵六、钱七
+..."></textarea>
+    <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+      <button id="bulkAddBtn">添加到邀请</button>
+      <label class="small"><input id="allowDup" type="checkbox"> 允许重名（默认去重）</label>
+    </div>
+  </div>
+
+  <div class="note-wrap">
+    <span class="small">聚会备注：</span>
+    <textarea id="weekNote" placeholder="写点备忘（地点、时间变更、餐食安排等）…"></textarea>
+  </div>
+
+  <div class="columns">
+    <section class="col" data-status="pool">
+      <h3>邀请 <span class="count" id="count-pool">0</span></h3>
+      <div class="list" id="list-pool"></div>
+    </section>
+    <section class="col" data-status="yes">
+      <h3>确定 <span class="count" id="count-yes">0</span></h3>
+      <div class="list" id="list-yes"></div>
+    </section>
+    <section class="col" data-status="maybe">
+      <h3>待定 <span class="count" id="count-maybe">0</span></h3>
+      <div class="list" id="list-maybe"></div>
+    </section>
+    <section class="col" data-status="no">
+      <h3>不来 <span class="count" id="count-no">0</span></h3>
+      <div class="list" id="list-no"></div>
+    </section>
+  </div>
+
+  <section class="bottom-panel">
+    <h3 style="margin:0 0 8px 0; font-size:15px;">下方分类（与上方名单同步，可拖拽排序并记住顺序）</h3>
+    <div class="bottom-rows">
+      <div class="bcol" data-bcat="member">
+        <h4>弟兄姊妹 <span class="bcount" id="bcount-member">0</span></h4>
+        <div class="blist" id="list-member"></div>
+      </div>
+      <div class="bcol" data-bcat="friend">
+        <h4>福音朋友 <span class="bcount" id="bcount-friend">0</span></h4>
+        <div class="blist" id="list-friend"></div>
+      </div>
+    </div>
+    <p class="small" style="margin-top:6px;color:#666;">说明：新增默认进入「福音朋友」。下方用于分类与排序，不能重命名/删除；上方的改名/删除会同步这里；可在两框之间拖动并持久化顺序。</p>
+  </section>
+
+  <section class="history-panel">
+    <h3 style="margin:0 0 8px 0; font-size:15px;">历史记录 / 回看某周</h3>
+    <div class="toolbar" style="margin-top:0;">
+      <select id="historySelect"></select>
+      <button id="loadHistoryBtn">载入该周到界面（不会覆盖当前历史）</button>
+      <button id="csvBtn">导出选定周CSV</button>
+      <button id="allCsvBtn">导出全历史CSV（明细）</button>
+      <button id="matrixCsvBtn">导出全历史CSV（矩阵）</button>
+    </div>
+    <p class="small" style="margin-top:4px;">提示：“保存本周记录”会产生快照；“一键重置”会先保存再重置。快照包含“人员名单 + 状态”。</p>
+  </section>
+</main>
+<footer>数据仅保存在本机浏览器（localStorage）。</footer>
+
+<script>
+(function(){
+  const $  = (sel)=>document.querySelector(sel);
+  const $$ = (sel)=>Array.from(document.querySelectorAll(sel));
+  const storeKey = 'invite_manager_v2';
+
+  const STATUS_LABEL = { pool:"邀请", yes:"确定", maybe:"待定", no:"不来" };
+
+  // —— 本地时区“下一个周日”（若今天是周日，取今天）
+  function nextSunday(d=new Date()){
+    const date = new Date(d.getFullYear(), d.getMonth(), d.getDate()); // 去掉时分秒避免跨天
+    const day = date.getDay(); // 0=Sun
+    const diff = (7 - day) % 7; // Sun->0, Mon->6...
+    date.setDate(date.getDate() + diff);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2,'0');
+    const dd = String(date.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
+  }
+  function fmtDate(iso){
+    const d = new Date(iso + 'T00:00:00');
+    return d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+  }
+
+  // —— 下方分类映射：id -> 'member' | 'friend'
+  function ensureBottomTypes(state){
+    if(!state.bottomTypes) state.bottomTypes = {};
+    const valid = new Set((state.people||[]).map(p=>p.id));
+    Object.keys(state.bottomTypes).forEach(id=>{ if(!valid.has(id)) delete state.bottomTypes[id]; });
+    (state.people||[]).forEach(p=>{ if(!state.bottomTypes[p.id]) state.bottomTypes[p.id] = 'friend'; });
+  }
+
+  // —— 载入（带自修复：四列顺序 + 底部分类/顺序）
+  function load(){
+    const raw = localStorage.getItem(storeKey);
+    if(!raw){
+      const init = {
+        people: [], statuses: {}, history: [],
+        order: { pool:[], yes:[], maybe:[], no:[] },
+        bottomTypes: {},
+        bottomOrder: { member:[], friend:[] },
+        notes: {} // weekISO -> note 文本
+      };
+      localStorage.setItem(storeKey, JSON.stringify(init));
+      return init;
+    }
+    let state; try{ state = JSON.parse(raw); }catch{ state = {}; }
+
+    if(!state.people)   state.people   = [];
+    if(!state.statuses) state.statuses = {};
+    if(!state.history)  state.history  = [];
+    if(!state.order)    state.order    = { pool:[], yes:[], maybe:[], no:[] };
+    if(!state.bottomTypes)  state.bottomTypes  = {};
+    if(!state.bottomOrder)  state.bottomOrder  = { member:[], friend:[] };
+    if(!state.notes)    state.notes    = {};
+
+    ensureBottomTypes(state);
+
+    // 顶部四列顺序自修复
+    const validIds = new Set(state.people.map(p=>p.id));
+    const bySt = { pool:[], yes:[], maybe:[], no:[] };
+    state.people.forEach(p=>{
+      const st = state.statuses[p.id] || 'pool';
+      bySt[st].push(p.id);
+    });
+    ['pool','yes','maybe','no'].forEach(st=>{
+      state.order[st] = (state.order[st]||[]).filter(id => validIds.has(id) && bySt[st].includes(id));
+      bySt[st].forEach(id=>{ if(!state.order[st].includes(id)) state.order[st].push(id); });
+    });
+
+    // 底部顺序自修复
+    ['member','friend'].forEach(k=>{
+      state.bottomOrder[k] = (state.bottomOrder[k]||[]).filter(id=>validIds.has(id));
+    });
+    state.people.forEach(p=>{
+      const cat = state.bottomTypes[p.id] || 'friend';
+      const arr = state.bottomOrder[cat];
+      if(!arr.includes(p.id)) arr.push(p.id);
+    });
+
+    return state;
+  }
+  function save(state){ localStorage.setItem(storeKey, JSON.stringify(state)); }
+
+  function normalizedName(name){ return (name||'').trim().replace(/\s+/g,' '); }
+  function existsByName(state, name){
+    const target = name.toLowerCase();
+    return state.people.some(p => (p.name||'').trim().toLowerCase() === target);
+  }
+
+  function addPerson(name, allowDup=false){
+    const state = load();
+    const nm = normalizedName(name);
+    if(!nm) return;
+    if(!allowDup && existsByName(state, nm)) return;
+    const id = 'p_' + Math.random().toString(36).slice(2,10);
+    state.people.push({id, name: nm});
+    state.statuses[id] = 'pool';
+
+    // 顶部顺序：加入“邀请”末尾
+    if(!state.order) state.order = { pool:[], yes:[], maybe:[], no:[] };
+    state.order.pool.push(id);
+
+    // 下方分类与顺序
+    ensureBottomTypes(state);
+    state.bottomTypes[id] = 'friend';
+    if(!state.bottomOrder) state.bottomOrder = { member:[], friend:[] };
+    state.bottomOrder.friend.push(id);
+
+    save(state); render();
+  }
+
+  function bulkAdd(text, allowDup=false){
+    const sep = /[,\n\r;、，；]+/;
+    const parts = (text||'').split(sep).map(s => normalizedName(s)).filter(Boolean);
+    const state = load();
+    parts.forEach(nm=>{
+      if(!allowDup && existsByName(state, nm)) return;
+      const id = 'p_' + Math.random().toString(36).slice(2,10);
+      state.people.push({id, name: nm});
+      state.statuses[id] = 'pool';
+      if(!state.order) state.order = { pool:[], yes:[], maybe:[], no:[] };
+      state.order.pool.push(id);
+      ensureBottomTypes(state);
+      if(!state.bottomOrder) state.bottomOrder = { member:[], friend:[] };
+      state.bottomTypes[id] = 'friend';
+      state.bottomOrder.friend.push(id);
+    });
+    save(state); render();
+  }
+
+  function setStatus(id, status){
+    const state = load();
+    state.statuses[id] = status;
+    save(state);
+    render();
+  }
+
+  // —— 历史快照（包含人员 + 状态 + 备注）
+  function captureSnapshot(weekISO){
+    const state = load();
+    const snapshot = {
+      week: weekISO,
+      when: new Date().toISOString(),
+      people: state.people.map(p => ({id:p.id, name:p.name})),
+      statuses: {}
+    };
+    state.people.forEach(p => { snapshot.statuses[p.id] = state.statuses[p.id] || 'pool'; });
+
+    // 保存备注
+    const noteText = $('#weekNote')?.value || '';
+    state.notes[weekISO] = noteText;
+
+    const idx = state.history.findIndex(h => h.week === weekISO);
+    if(idx >= 0) state.history[idx] = snapshot; else state.history.push(snapshot);
+    state.history.sort((a,b)=> (a.week < b.week) ? 1 : (a.week > b.week) ? -1 : 0);
+    save(state);
+  }
+
+  function saveThisWeek(){
+    const weekISO = $('#weekDate').value || nextSunday();
+    captureSnapshot(weekISO);
+    alert('已保存：' + fmtDate(weekISO));
+    renderHistorySelect();
+  }
+
+  function resetAllToPool(){
+    const weekISO = $('#weekDate').value || nextSunday();
+    captureSnapshot(weekISO);
+    const state = load();
+    state.people.forEach(p => state.statuses[p.id] = 'pool');
+    save(state);
+    render();
+    alert('已保存该周记录并重置为“邀请”。');
+  }
+
+  function latestSnapshot(){
+    const state = load();
+    return (state.history && state.history.length) ? state.history[0] : null;
+  }
+
+  function useLastWeekList(){
+    const snap = latestSnapshot();
+    if(!snap){ alert('没有可用的上周记录，请先保存一次本周记录。'); return; }
+    const state = load();
+
+    const byId = new Set(state.people.map(p=>p.id));
+    const byNameLower = new Set(state.people.map(p=>(p.name||'').trim().toLowerCase()));
+    (snap.people || []).forEach(sp => {
+      if (sp && sp.id && !byId.has(sp.id)) {
+        state.people.push({id: sp.id, name: sp.name || ''});
+        byId.add(sp.id);
+        byNameLower.add((sp.name||'').trim().toLowerCase());
+      } else if (sp && sp.name) {
+        const nm = (sp.name||'').trim();
+        if(!byNameLower.has(nm.toLowerCase())){
+          const id = 'p_' + Math.random().toString(36).slice(2,10);
+          state.people.push({id, name: nm});
+          byId.add(id);
+          byNameLower.add(nm.toLowerCase());
+        }
+      }
+    });
+
+    state.people.forEach(p => state.statuses[p.id] = 'pool');
+    save(state); render();
+    alert('已沿用上周名单（未删除现有人员），并已重置为“邀请”。');
+  }
+
+  function overwriteWithLastWeekList(){
+    const snap = latestSnapshot();
+    if(!snap){ alert('没有可用的上周记录，请先保存一次本周记录。'); return; }
+    if(!confirm('确定用上周名单覆盖当前吗？这会删除当前多余的人员。')) return;
+
+    const state = load();
+    const lastPeople = (snap.people || []).map(sp => ({id: sp.id || ('p_'+Math.random().toString(36).slice(2,10)), name: sp.name || ''}));
+    state.people = lastPeople;
+    state.statuses = {};
+    state.people.forEach(p => state.statuses[p.id] = 'pool');
+
+    // 重建顺序与底部分类
+    state.order = { pool: state.people.map(p=>p.id), yes:[], maybe:[], no:[] };
+    state.bottomTypes = {};
+    state.people.forEach(p=> state.bottomTypes[p.id] = 'friend');
+    state.bottomOrder = { member: [], friend: state.people.map(p=>p.id) };
+
+    save(state); render();
+    alert('已用上周名单覆盖当前，并已重置为“邀请”。');
+  }
+
+  // —— 渲染
+  function render(){
+    const state = load();
+    const lists = { pool: $('#list-pool'), yes: $('#list-yes'), maybe: $('#list-maybe'), no: $('#list-no') };
+    Object.values(lists).forEach(ul => ul.innerHTML='');
+
+    const id2p = {}; (state.people||[]).forEach(p=> id2p[p.id]=p);
+
+    ['pool','yes','maybe','no'].forEach(st=>{
+      const ul = lists[st];
+      let ids = (state.order && state.order[st]) ? state.order[st].slice() : [];
+      if(!ids || ids.length === 0){
+        ids = (state.people||[])
+          .filter(p => (state.statuses[p.id] || 'pool') === st)
+          .map(p => p.id);
+      }
+      let has = false;
+      ids.forEach(id=>{
+        const p = id2p[id];
+        if(!p) return;
+        const cur = state.statuses[p.id] || 'pool';
+        if(cur !== st) return;
+        const el = document.createElement('div');
+        el.className = 'item'; el.draggable = true; el.dataset.id = p.id;
+        el.innerHTML = `
+          <span class="name">${escapeHTML(p.name)}</span>
+          <span class="actions">
+            <button class="chip" data-action="rename">改名</button>
+            <button class="chip" data-action="delete">删除</button>
+          </span>`;
+        ul.appendChild(el); has = true;
+      });
+      if(!has) ul.innerHTML = '<div class="empty">暂无人员，请先添加。</div>';
+    });
+
+    enableDnDSortable();     // 顶部四列：可插队拖拽 + 跨列
+    enableItemActions();
+    renderCounts();
+    renderHistorySelect();
+    renderBottomPanel();
+
+    // 加载本周备注（若已保存过）
+    const weekISO = $('#weekDate').value;
+    $('#weekNote').value = (load().notes[weekISO] || '');
+  }
+
+  function renderCounts(){
+    const state = load();
+    const counts = { pool:0, yes:0, no:0, maybe:0 };
+    state.people.forEach(p => { counts[state.statuses[p.id] || 'pool']++; });
+    $('#count-pool').textContent = counts.pool;
+    $('#count-yes').textContent = counts.yes;
+    $('#count-no').textContent = counts.no;
+    $('#count-maybe').textContent = counts.maybe;
+  }
+
+  function renderHistorySelect(){
+    const state = load();
+    const sel = $('#historySelect');
+    sel.innerHTML = '';
+    if(!state.history || state.history.length===0){
+      const opt = document.createElement('option');
+      opt.value = ''; opt.textContent = '暂无历史记录';
+      sel.appendChild(opt);
+      return;
+    }
+    state.history.forEach(h => {
+      const opt = document.createElement('option');
+      opt.value = h.week;
+      opt.textContent = `${h.week}（${fmtDate(h.week)}）`;
+      sel.appendChild(opt);
+    });
+  }
+
+  // —— 下方分类（按 bottomOrder 渲染 + 兜底）
+  function renderBottomPanel(){
+    const state = load();
+    ensureBottomTypes(state);
+    if(!state.bottomOrder) state.bottomOrder = { member: [], friend: [] };
+
+    const memberList = document.getElementById('list-member');
+    const friendList = document.getElementById('list-friend');
+    memberList.innerHTML = ''; friendList.innerHTML = '';
+
+    const id2p = {}; (state.people||[]).forEach(p=> id2p[p.id]=p);
+
+    let memberIds = (state.bottomOrder.member||[]).slice();
+    let friendIds = (state.bottomOrder.friend||[]).slice();
+
+    (state.people||[]).forEach(p=>{
+      const cat = state.bottomTypes[p.id] || 'friend';
+      if(cat === 'member'){
+        if(!memberIds.includes(p.id)) memberIds.push(p.id);
+      }else{
+        if(!friendIds.includes(p.id)) friendIds.push(p.id);
+      }
+    });
+
+    let memberCnt=0, friendCnt=0;
+    memberIds.forEach(id=>{
+      const p = id2p[id]; if(!p) return;
+      const tag = document.createElement('div');
+      tag.className = 'btag'; tag.draggable = true; tag.dataset.id = id;
+      tag.textContent = p.name || '';
+      memberList.appendChild(tag); memberCnt++;
+    });
+    friendIds.forEach(id=>{
+      const p = id2p[id]; if(!p) return;
+      const tag = document.createElement('div');
+      tag.className = 'btag'; tag.draggable = true; tag.dataset.id = id;
+      tag.textContent = p.name || '';
+      friendList.appendChild(tag); friendCnt++;
+    });
+
+    document.getElementById('bcount-member').textContent = memberCnt;
+    document.getElementById('bcount-friend').textContent = friendCnt;
+
+    enableBottomDnDSortable();
+  }
+
+  // —— 顶部四列拖拽：列内排序 + 跨列移动 + 持久化
+  function enableDnDSortable(){
+    const cols = $$('.col .list');
+    let draggingEl = null;
+
+    function getAfterElement(container, y){
+      const els = [...container.querySelectorAll('.item:not(.dragging)')];
+      let closest = {offset: Number.NEGATIVE_INFINITY, el: null};
+      els.forEach(el=>{
+        const box = el.getBoundingClientRect();
+        const offset = y - (box.top + box.height/2);
+        if(offset < 0 && offset > closest.offset){
+          closest = {offset, el};
+        }
+      });
+      return closest.el;
+    }
+
+    $$('.item').forEach(el=>{
+      el.addEventListener('dragstart', e=>{
+        draggingEl = el;
+        el.classList.add('dragging');
+        try{ e.dataTransfer.setData('text/plain', el.dataset.id); e.dataTransfer.effectAllowed='move'; }catch(_){}
+      });
+      el.addEventListener('dragend', ()=>{
+        el.classList.remove('dragging');
+        draggingEl = null;
+        persistCurrentOrder();
+      });
+    });
+
+    cols.forEach(list=>{
+      list.addEventListener('dragover', e=>{
+        e.preventDefault();
+        const after = getAfterElement(list, e.clientY);
+        if(!draggingEl) return;
+        if(after == null) list.appendChild(draggingEl);
+        else list.insertBefore(draggingEl, after);
+      });
+
+      list.addEventListener('drop', e=>{
+        e.preventDefault();
+        const id = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || (draggingEl && draggingEl.dataset.id);
+        const status = list.parentElement.dataset.status; // pool/yes/maybe/no
+        if(!id || !status) return;
+
+        const state = load();
+        if(!state.order) state.order = { pool:[], yes:[], maybe:[], no:[] };
+
+        state.statuses[id] = status;
+        ['pool','yes','maybe','no'].forEach(st=>{
+          state.order[st] = (state.order[st]||[]).filter(x=>x!==id);
+        });
+
+        const ids = [...list.querySelectorAll('.item')].map(x=>x.dataset.id);
+        state.order[status] = ids;
+
+        save(state);
+        render();
+      });
+    });
+
+    function persistCurrentOrder(){
+      const state = load();
+      ['pool','yes','maybe','no'].forEach(st=>{
+        const list = document.querySelector(`.col[data-status="${st}"] .list`);
+        if(!list) return;
+        state.order[st] = [...list.querySelectorAll('.item')].map(x=>x.dataset.id);
+      });
+      save(state);
+    }
+  }
+
+  // —— 下方分类拖拽：列内排序 + 跨列移动 + 持久化
+  function enableBottomDnDSortable(){
+    const memberList = document.getElementById('list-member');
+    const friendList = document.getElementById('list-friend');
+    const lists = [memberList, friendList];
+    let draggingEl = null;
+
+    function getAfterElement(container, y){
+      const els = [...container.querySelectorAll('.btag:not(.dragging)')];
+      let closest = {offset: Number.NEGATIVE_INFINITY, el: null};
+      els.forEach(el=>{
+        const box = el.getBoundingClientRect();
+        const offset = y - (box.top + box.height/2);
+        if(offset < 0 && offset > closest.offset){
+          closest = {offset, el};
+        }
+      });
+      return closest.el;
+    }
+
+    lists.forEach(list=>{
+      [...list.querySelectorAll('.btag')].forEach(el=>{
+        el.addEventListener('dragstart', e=>{
+          draggingEl = el;
+          el.classList.add('dragging');
+          try{ e.dataTransfer.setData('text/plain', el.dataset.id); e.dataTransfer.effectAllowed='move'; }catch(_){}
+        });
+        el.addEventListener('dragend', ()=>{
+          el.classList.remove('dragging');
+          draggingEl = null;
+          persistBottomOrder();
+        });
+      });
+    });
+
+    lists.forEach(list=>{
+      list.addEventListener('dragover', e=>{
+        e.preventDefault();
+        const after = getAfterElement(list, e.clientY);
+        if(!draggingEl) return;
+        if(after == null) list.appendChild(draggingEl);
+        else list.insertBefore(draggingEl, after);
+        list.classList.add('drop-hint');
+      });
+      list.addEventListener('dragleave', e=>{
+        if(!list.contains(e.relatedTarget)) list.classList.remove('drop-hint');
+      });
+      list.addEventListener('drop', e=>{
+        e.preventDefault();
+        list.classList.remove('drop-hint');
+
+        const id = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || (draggingEl && draggingEl.dataset.id);
+        if(!id) return;
+
+        const state = load();
+        if(!state.bottomTypes) state.bottomTypes = {};
+        if(!state.bottomOrder) state.bottomOrder = { member:[], friend:[] };
+
+        const targetCat = (list.id === 'list-member') ? 'member' : 'friend';
+        state.bottomTypes[id] = targetCat;
+
+        ['member','friend'].forEach(k=>{
+          state.bottomOrder[k] = (state.bottomOrder[k]||[]).filter(x=>x!==id);
+        });
+
+        const ids = [...list.querySelectorAll('.btag')].map(x=>x.dataset.id);
+        state.bottomOrder[targetCat] = ids;
+
+        save(state);
+        document.getElementById('bcount-member').textContent = memberList.querySelectorAll('.btag').length;
+        document.getElementById('bcount-friend').textContent = friendList.querySelectorAll('.btag').length;
+      });
+    });
+
+    function persistBottomOrder(){
+      const state = load();
+      if(!state.bottomOrder) state.bottomOrder = { member:[], friend:[] };
+      state.bottomOrder.member = [...memberList.querySelectorAll('.btag')].map(x=>x.dataset.id);
+      state.bottomOrder.friend = [...friendList.querySelectorAll('.btag')].map(x=>x.dataset.id);
+      save(state);
+    }
+  }
+
+  // 绑定卡片上的“改名 / 删除”两个按钮，并把顺序/分类一并维护
+function enableItemActions(){
+  // 先解绑旧事件，避免重复绑定（可选）
+  $$('.item .actions .chip').forEach(btn => {
+    btn.replaceWith(btn.cloneNode(true));
+  });
+
+  $$('.item .actions .chip').forEach(btn => {
+    btn.addEventListener('click', ()=>{
+      const action = btn.dataset.action;
+      const id = btn.closest('.item').dataset.id;
+      const state = load();
+
+      if(action === 'delete'){
+        if(!confirm('确定删除该人员？')) return;
+
+        // 1) 从人员表删除
+        state.people = (state.people||[]).filter(p => p.id !== id);
+
+        // 2) 删除状态
+        if(state.statuses) delete state.statuses[id];
+
+        // 3) 从四列顺序表移除
+        if(!state.order) state.order = { pool:[], yes:[], maybe:[], no:[] };
+        ['pool','yes','maybe','no'].forEach(st=>{
+          state.order[st] = (state.order[st]||[]).filter(x => x !== id);
+        });
+
+        // 4) 删除下方分类映射与顺序
+        if(state.bottomTypes) delete state.bottomTypes[id];
+        if(!state.bottomOrder) state.bottomOrder = { member:[], friend:[] };
+        ['member','friend'].forEach(k=>{
+          state.bottomOrder[k] = (state.bottomOrder[k]||[]).filter(x => x !== id);
+        });
+
+        save(state);
+        render();               // 重新渲染：上方卡片 & 下方分类都会更新
+      }
+
+      if(action === 'rename'){
+        const p = (state.people||[]).find(p => p.id === id);
+        const oldName = p ? (p.name||'') : '';
+        const nv = prompt('修改姓名：', oldName);
+        const normalized = (nv||'').trim().replace(/\s+/g,' ');
+        if(normalized && p){
+          p.name = normalized;
+          // 下方分类显示的名字来源于 state.people，同步后直接重渲就好
+          save(state);
+          render();
+        }
+      }
+    });
+  });
+}
+  // —— 工具
+  function escapeHTML(str){
+    return (str||'').replace(/[&<>"']/g, s=>({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    })[s]);
+  }
+
+  // —— PNG 导出（含下方分类区）
+function exportBoardPNG(){
+  try{
+    // ===== 基本配置（导出更清晰）=====
+    const scale   = 2;
+    const baseW   = 700;    // 画布逻辑宽度
+    const COL_W   = 160;    // 上方单列宽
+    const COL_GAP = 12;
+    const P       = 24;     // 外边距
+    const HEADER_H= 80;     // 顶部标题/日期/备注区
+    const ROW_H   = 28;     // 上方姓名卡片高度
+    const ROW_GAP = 6;
+    const FOOTER_H= 24;
+
+    // —— 分类区尺寸
+    const SECTION_GAP = 16; // 四列与分类区之间的间距
+    const BOX_GAP     = 12; // 两个分类框之间的水平间距
+    const BOX_PAD     = 10; // 分类框内边距
+    const TAG_H       = 20; // 分类区姓名标签高度
+    const TAG_GAP     = 6;  // 标签之间的间距
+    const TAG_PAD_X   = 10; // 标签左右内边距
+    const TITLE_H     = 22; // 每个分类框标题高度
+    const SECTION_TITLE_H = 20; // “下方分类”标题高度
+
+    // ===== 取数据（优先选中周；分类使用当前页面分类）=====
+    const state   = load();
+    const weekSel = document.getElementById('historySelect')?.value || '';
+    const snap    = weekSel ? (state.history||[]).find(h=>h.week===weekSel) : null;
+
+    let weekISO = weekSel || (document.getElementById('weekDate')?.value || '');
+    let people  = snap ? (snap.people   || []) : (state.people   || []);
+    let statuses= snap ? (snap.statuses || {}) : (state.statuses || {});
+    let note    = snap ? (state.notes && state.notes[weekISO]) || '' : (document.getElementById('weekNote')?.value || '');
+
+    // 上方四列分桶
+    const buckets = { pool:[], yes:[], maybe:[], no:[] };
+    people.forEach(p=>{
+      const st = statuses[p.id] || 'pool';
+      (buckets[st]||buckets.pool).push(p.name || '');
+    });
+
+    // —— 下方分类的数据（用当前页面的分类与顺序）
+    const id2name = {}; (people||[]).forEach(p=> id2name[p.id] = p.name || '');
+    const bottomTypes = state.bottomTypes || {};
+    const bottomOrder = state.bottomOrder || {member:[], friend:[]};
+
+    function collectBottom(cat){
+      const ordered = (bottomOrder[cat]||[]).filter(id=>id2name[id]).map(id=>id2name[id]);
+      // 把顺序里没有但类型属于该类的也补上
+      const extra = [];
+      Object.keys(bottomTypes).forEach(id=>{
+        if(bottomTypes[id] === cat && id2name[id] && !ordered.includes(id2name[id])){
+          extra.push(id2name[id]);
+        }
+      });
+      return ordered.concat(extra);
+    }
+    const members = collectBottom('member');
+    const friends = collectBottom('friend');
+
+    // ===== 先预计算高度（需要测量文本宽度）=====
+    // 用一个临时 ctx 来测量标签宽度，决定行数/高度
+    const tempCanvas = document.createElement('canvas');
+    const tctx = tempCanvas.getContext('2d');
+    function setMeasureFont(px,bold=false){
+      tctx.font = `${bold?'600 ':''}${px}px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"PingFang SC","Microsoft YaHei"`;
+    }
+    setMeasureFont(12,false);
+
+    const colsMaxRows = Math.max(
+      buckets.pool.length, buckets.yes.length, buckets.maybe.length, buckets.no.length, 1
+    );
+    const BODY_H  = 40 + (ROW_H + ROW_GAP) * colsMaxRows; // 上方四列高度（卡片区）
+    const topPartH = P + HEADER_H + BODY_H;               // 上方总高（不含页脚）
+
+    // 分类框宽度（两列）
+    const totalW  = baseW - P*2;
+    const boxW    = (totalW - BOX_GAP) / 2;
+
+    function measureBoxHeight(names){
+      let x = 0, rows = 0;
+      names.forEach(n=>{
+        const text = String(n||'').trim();
+        const w = Math.ceil(tctx.measureText(text).width) + TAG_PAD_X*2;
+        if(x === 0){ // 行首
+          x = w; rows = 1;
+        }else{
+          if(x + TAG_GAP + w <= boxW - BOX_PAD*2){
+            x += TAG_GAP + w;
+          }else{
+            rows += 1; x = w;
+          }
+        }
+      });
+      if(rows === 0) rows = 1; // 最少一行
+      // 盒子高度 = 顶部标题 + 间距 + rows 行标签 + 内边距
+      return BOX_PAD + TITLE_H + 6 + rows*TAG_H + (rows-1)*TAG_GAP + BOX_PAD;
+    }
+    const memberBoxH = measureBoxHeight(members);
+    const friendBoxH = measureBoxHeight(friends);
+    const bottomBoxesH = Math.max(memberBoxH, friendBoxH);
+    const bottomSectionH = SECTION_GAP + SECTION_TITLE_H + 8 + bottomBoxesH; // 包含“下方分类”标题
+
+    // 总高度
+    const Hbase = topPartH + bottomSectionH + FOOTER_H + P;
+
+    // ===== 正式画布 =====
+    const W = baseW * scale, H = Hbase * scale;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    // 颜色
+    const COLORS = {
+      bg:'#f7f7f8', card:'#fff', text:'#111', line:'#e6e6e6',
+      pool:'#6aa5ff', yes:'#35c28d', maybe:'#f7b84b', no:'#ef5b6b'
+    };
+
+    function setFont(px,bold=false){
+      ctx.font = `${bold?'600 ':''}${px}px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"PingFang SC","Microsoft YaHei"`;
+    }
+    function roundRectPath(ctx, x, y, w, h, r){
+      const rr = Math.max(0, Math.min(r || 8, w/2, h/2));
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.lineTo(x + w - rr, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+      ctx.lineTo(x + w, y + h - rr);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+      ctx.lineTo(x + rr, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+      ctx.lineTo(x, y + rr);
+      ctx.quadraticCurveTo(x, y, x + rr, y);
+      ctx.closePath();
+    }
+    function fitText(t,maxW){
+      let s = String(t || '');
+      while (ctx.measureText(s).width > maxW) {
+        if (s.length <= 1) break;
+        s = s.slice(0,-1);
+      }
+      return s !== t ? s + '…' : s;
+    }
+
+    // 背景
+    ctx.fillStyle = COLORS.bg; ctx.fillRect(0,0,baseW,Hbase);
+
+    // 顶部：标题/日期/顾问/备注
+    const topY = P;
+
+    setFont(22,true); ctx.fillStyle = COLORS.text; ctx.textAlign = 'center';
+    ctx.fillText('主日下午LIC聚会邀请', baseW/2, topY + 24);
+
+    ctx.textAlign = 'left'; setFont(15,false);
+    const dateLabel = weekISO ? ('日期：' + weekISO) : '日期：未选择';
+    ctx.fillText(dateLabel, P, topY + 24);
+
+    ctx.textAlign = 'right'; setFont(15,true);
+    ctx.fillText('顾问：饶铭杰', baseW - P, topY + 24);
+    ctx.textAlign = 'left';
+
+    if(note && note.trim()){
+      setFont(13,false); ctx.fillStyle = '#333';
+      const n = note.trim(); const len = 28;
+      const lines = n.length > len ? [n.slice(0,len), n.slice(len, len*2)] : [n];
+      lines.forEach((l,i)=> ctx.fillText('备注：' + l, P, topY + 50 + i*18));
+    }
+
+    // 上方四列
+    const cols = [
+      {key:'pool',  title:'邀请', color:COLORS.pool},
+      {key:'yes',   title:'确定', color:COLORS.yes},
+      {key:'maybe', title:'待定', color:COLORS.maybe},
+      {key:'no',    title:'不来', color:COLORS.no}
+    ];
+    const totalColsW  = 4*COL_W + 3*COL_GAP;
+    const leftPad = (baseW - totalColsW) / 2;
+    const colsTop = topY + HEADER_H;
+
+    cols.forEach((c,idx)=>{
+      const x = leftPad + idx*(COL_W + COL_GAP);
+      const y = colsTop;
+
+      ctx.fillStyle = COLORS.card; roundRectPath(ctx, x, y, COL_W, BODY_H, 10); ctx.fill();
+      ctx.strokeStyle = COLORS.line; ctx.lineWidth = 1; roundRectPath(ctx, x, y, COL_W, BODY_H, 10); ctx.stroke();
+
+      setFont(14,true); ctx.fillStyle = COLORS.text;
+      ctx.fillText(c.title, x + 10, y + 22);
+      ctx.fillStyle = c.color; ctx.beginPath(); ctx.arc(x + COL_W - 14, y + 16, 5, 0, Math.PI*2); ctx.fill();
+
+      setFont(12,false);
+      let cy = y + 36;
+      (buckets[c.key] || []).forEach(nm=>{
+        const iw = COL_W - 20, ih = ROW_H;
+        ctx.fillStyle = '#fafafa'; roundRectPath(ctx, x+10, cy, iw, ih, 6); ctx.fill();
+        ctx.strokeStyle = COLORS.line; ctx.lineWidth = 1; roundRectPath(ctx, x+10, cy, iw, ih, 6); ctx.stroke();
+        ctx.fillStyle = c.color; roundRectPath(ctx, x+10, cy, 5, ih, 6); ctx.fill();
+        ctx.fillStyle = '#222'; ctx.fillText(fitText(nm, iw - 20), x + 24, cy + ih/2 + 4);
+        cy += ih + ROW_GAP;
+      });
+    });
+
+    // ===== 下方分类标题 =====
+    const sectionTop = colsTop + BODY_H + SECTION_GAP;
+    setFont(14,true); ctx.fillStyle = COLORS.text;
+    ctx.fillText('下方分类', P, sectionTop + SECTION_TITLE_H);
+
+    // ===== 两个分类框（等高）=====
+    const boxesTop = sectionTop + SECTION_TITLE_H + 8;
+    const boxX1 = P, boxX2 = P + boxW + BOX_GAP;
+
+    // 画一个分类框的函数
+    function drawBox(x, y, w, h, title, color, names){
+      // 外框
+      ctx.fillStyle = COLORS.card; roundRectPath(ctx, x, y, w, h, 10); ctx.fill();
+      ctx.strokeStyle = COLORS.line; ctx.lineWidth = 1; roundRectPath(ctx, x, y, w, h, 10); ctx.stroke();
+
+      // 标题 + 彩点 + 计数
+      setFont(13,true); ctx.fillStyle = COLORS.text;
+      ctx.fillText(title, x + BOX_PAD, y + BOX_PAD + 14);
+      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x + BOX_PAD + 58, y + BOX_PAD + 10, 4, 0, Math.PI*2); ctx.fill();
+      setFont(12,false); ctx.fillStyle = '#666';
+      ctx.fillText(`(${names.length})`, x + BOX_PAD + 68, y + BOX_PAD + 14);
+
+      // 标签区域
+      let cx = x + BOX_PAD, cy = y + BOX_PAD + TITLE_H + 6;
+      setFont(12,false);
+      names.forEach(nm=>{
+        const text = String(nm||'').trim();
+        const tw = Math.ceil(ctx.measureText(text).width);
+        const ww = tw + TAG_PAD_X*2;
+        const avail = x + w - BOX_PAD;
+        if(cx + ww > avail){
+          cx = x + BOX_PAD;
+          cy += TAG_H + TAG_GAP;
+        }
+        // 背景圆角
+        ctx.fillStyle = '#f5f7fb';
+        roundRectPath(ctx, cx, cy, ww, TAG_H, 999);
+        ctx.fill();
+        ctx.strokeStyle = COLORS.line; ctx.lineWidth = 1;
+        roundRectPath(ctx, cx, cy, ww, TAG_H, 999);
+        ctx.stroke();
+        // 文本
+        ctx.fillStyle = '#222';
+        ctx.fillText(text, cx + TAG_PAD_X, cy + TAG_H/2 + 4);
+        cx += ww + TAG_GAP;
+      });
+    }
+
+    drawBox(boxX1, boxesTop, boxW, bottomBoxesH, '弟兄姊妹', '#35c28d', members);
+    drawBox(boxX2, boxesTop, boxW, bottomBoxesH, '福音朋友', '#6aa5ff', friends);
+
+    // 页脚
+    setFont(11,false); ctx.fillStyle = '#888';
+    ctx.fillText('Generated by InviteManager', P, Hbase - P);
+
+    // 下载
+    if (canvas.toBlob) {
+      canvas.toBlob(blob=>{
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'InviteBoard_' + (weekISO || new Date().toISOString().slice(0,10)) + '.png';
+        a.click(); URL.revokeObjectURL(url);
+      }, 'image/png');
+    } else {
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = 'InviteBoard_' + (weekISO || new Date().toISOString().slice(0,10)) + '.png';
+      a.click();
+    }
+  }catch(e){
+    console.error(e);
+    alert('导出失败：' + e.message);
+  }
+}
+  window.exportBoardPNG = exportBoardPNG;
+
+  // —— 下载当前页面为单个 HTML
+  function downloadSelf(){
+    const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const date = new Date().toISOString().slice(0,10);
+    a.download = `InviteManager_v2.9_${date}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // —— CSV 导出（UTF-8 + BOM，避免中文乱码）
+  function exportCSVForSelectedWeek(){
+    const week = $('#historySelect').value;
+    const state = load();
+    const target = state.history.find(h=>h.week===week);
+    if(!target){ alert('请选择历史中的某一周'); return; }
+
+    const nameById = {};
+    (target.people || []).forEach(p => nameById[p.id] = p.name || '');
+
+    const lines = [];
+    lines.push('week,name,确定,邀请,待定,不来');
+
+    const seen = new Set();
+    (target.people || []).forEach(p=>{
+      const name = (nameById[p.id] || p.name || '').trim();
+      if(!name) return;
+      const key = name.toLowerCase();
+      if(seen.has(key)) return;
+      seen.add(key);
+      const stKey = target.statuses[p.id] || 'pool';
+      lines.push([
+        target.week,
+        '"' + name.replace(/"/g,'""') + '"',
+        stKey === 'yes'   ? '1' : '',
+        stKey === 'pool'  ? '1' : '',
+        stKey === 'maybe' ? '1' : '',
+        stKey === 'no'    ? '1' : ''
+      ].join(','));
+    });
+
+    const csv = '\uFEFF' + lines.join('\r\n');
+    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `invite_${target.week}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  function exportAllHistoryCSV(){
+    const state = load();
+    const hist = (state.history || []).slice().sort((a,b)=> a.week.localeCompare(b.week));
+    if(hist.length === 0){ alert('暂无历史。'); return; }
+
+    const lines = [];
+    lines.push('week,name,确定,邀请,待定,不来');
+
+    hist.forEach(h => {
+      const nameById = {};
+      (h.people || []).forEach(p => { if(p && p.id) nameById[p.id] = p.name || ''; });
+
+      const seenName = new Set();
+      const rows = [];
+      Object.entries(h.statuses || {}).forEach(([pid, stKey])=>{
+        const name = (nameById[pid] || '').trim();
+        if(!name) return;
+        const key = name.toLowerCase();
+        if(seenName.has(key)) return;
+        seenName.add(key);
+        rows.push({ name, stKey: stKey || 'pool' });
+      });
+
+      rows.sort((a,b)=> a.name.localeCompare(b.name, 'zh-Hans-CN'));
+
+      rows.forEach(({name, stKey})=>{
+        lines.push([
+          h.week,
+          '"' + name.replace(/"/g,'""') + '"',
+          stKey === 'yes'   ? '1' : '',
+          stKey === 'pool'  ? '1' : '',
+          stKey === 'maybe' ? '1' : '',
+          stKey === 'no'    ? '1' : ''
+        ].join(','));
+      });
+    });
+
+    const csv = '\uFEFF' + lines.join('\r\n');
+    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'invite_all_history.csv';
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  function exportMatrixCSV(){
+    const state = load();
+    const hist = (state.history || []).slice().sort((a,b)=> a.week.localeCompare(b.week));
+    if(hist.length === 0){ alert('暂无历史。'); return; }
+
+    const weeks = hist.map(h => h.week);
+
+    const allNames = new Map(); // nameLower -> displayName
+    hist.forEach(h => {
+      (h.people || []).forEach(p => {
+        const nm = (p.name || '').trim();
+        if(!nm) return;
+        const key = nm.toLowerCase();
+        if(!allNames.has(key)) allNames.set(key, nm);
+      });
+    });
+
+    const weekNameToStatus = {};
+    hist.forEach(h => {
+      const map = {};
+      const name2id = {};
+      (h.people || []).forEach(p => { name2id[(p.name||'').trim().toLowerCase()] = p.id; });
+      Object.keys(name2id).forEach(nl => {
+        const pid = name2id[nl];
+        const stKey = (h.statuses && h.statuses[pid]) ? h.statuses[pid] : '';
+        map[nl] = stKey;
+      });
+      weekNameToStatus[h.week] = map;
+    });
+
+    const toLabel = k => ({pool:'邀请', yes:'确定', maybe:'待定', no:'不来'}[k] || '');
+    const lines = [];
+    lines.push('name,' + weeks.join(','));
+
+    Array.from(allNames.entries())
+      .sort((a,b)=> a[1].localeCompare(b[1], 'zh-Hans-CN'))
+      .forEach(([nameLower, displayName]) => {
+        const row = ['"' + displayName.replace(/"/g,'""') + '"'];
+        weeks.forEach(w => {
+          const stKey = (weekNameToStatus[w] && weekNameToStatus[w][nameLower]) || '';
+          const label = toLabel(stKey);
+          row.push('"' + label.replace(/"/g,'""') + '"');
+        });
+        lines.push(row.join(','));
+      });
+
+    const csv = '\uFEFF' + lines.join('\r\n');
+    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'invite_history_matrix.csv';
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  // —— JSON 备份/恢复 & 下载本页
+  function exportJSON(){
+    const state = load();
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'invite_manager_backup.json';
+    a.click(); URL.revokeObjectURL(url);
+  }
+  function importJSON(file){
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      try{
+        const obj = JSON.parse(e.target.result);
+        if(!obj.people || !obj.statuses || !Array.isArray(obj.history)){
+          alert('文件格式不正确'); return;
+        }
+        if(!obj.order) obj.order = { pool:[], yes:[], maybe:[], no:[] };
+        if(!obj.bottomTypes) obj.bottomTypes = {};
+        if(!obj.bottomOrder) obj.bottomOrder = { member:[], friend:[] };
+        if(!obj.notes) obj.notes = {};
+        save(obj); render(); alert('导入成功');
+      }catch(err){ alert('解析失败：' + err.message); }
+    };
+    reader.readAsText(file);
+  }
+  function loadHistoryToUI(){
+    const week = $('#historySelect').value;
+    if(!week){ alert('没有可载入的历史'); return; }
+    const state = load();
+    const h = state.history.find(x => x.week === week);
+    if(!h){ alert('未找到记录'); return; }
+    Object.entries(h.statuses || {}).forEach(([pid, st]) => state.statuses[pid] = st);
+    // 同步备注
+    $('#weekDate').value = week;
+    $('#weekNote').value = state.notes[week] || '';
+    save(state);
+    render();
+  }
+
+  // —— Google Sheet 云同步
+  const GOOGLE_SCRIPT_URL_KEY = 'invite_manager_google_script_url';
+
+  function getGoogleScriptUrl(){
+    return (localStorage.getItem(GOOGLE_SCRIPT_URL_KEY) || '').trim();
+  }
+
+  function setSyncStatus(msg){
+    const el = document.getElementById('googleSyncStatus');
+    if(el) el.textContent = msg || '';
+  }
+
+  function setupGoogleSync(){
+    const current = getGoogleScriptUrl();
+    const url = prompt('请粘贴部署后的 Google Apps Script Web App URL：', current);
+    if(url === null) return;
+    const v = url.trim();
+    if(!v){
+      localStorage.removeItem(GOOGLE_SCRIPT_URL_KEY);
+      setSyncStatus('Google 同步地址已清除');
+      return;
+    }
+    localStorage.setItem(GOOGLE_SCRIPT_URL_KEY, v);
+    setSyncStatus('Google 同步已设置');
+  }
+
+  async function syncToGoogleSheet(){
+    const url = getGoogleScriptUrl();
+    if(!url){ alert('请先点击“设置 Google 同步”，粘贴 Apps Script Web App URL。'); return; }
+    setSyncStatus('正在同步…');
+    try{
+      const state = load();
+      // 把当前备注也写入 state，避免尚未点“保存本周记录”时备注丢失
+      const weekISO = $('#weekDate').value || nextSunday();
+      state.notes = state.notes || {};
+      state.notes[weekISO] = $('#weekNote')?.value || '';
+      save(state);
+
+      const res = await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({ action:'save', state, currentWeek:weekISO })
+      });
+      const data = await res.json();
+      if(!data || !data.ok) throw new Error((data && data.error) || '同步失败');
+      setSyncStatus('已同步 ' + new Date().toLocaleTimeString());
+      alert('已同步到 Google Sheet');
+    }catch(err){
+      console.error(err);
+      setSyncStatus('同步失败');
+      alert('同步失败：' + err.message + '\n\n请确认 Apps Script 已部署为 Web App，并允许访问。');
+    }
+  }
+
+  async function loadFromGoogleSheet(){
+    const url = getGoogleScriptUrl();
+    if(!url){ alert('请先点击“设置 Google 同步”，粘贴 Apps Script Web App URL。'); return; }
+    if(!confirm('从 Google Sheet 读取会覆盖当前浏览器里的实时名单。继续吗？')) return;
+    setSyncStatus('正在读取…');
+    try{
+      const sep = url.includes('?') ? '&' : '?';
+      const res = await fetch(url + sep + 'action=load&_=' + Date.now());
+      const data = await res.json();
+      if(!data || !data.ok) throw new Error((data && data.error) || '读取失败');
+      if(!data.state) throw new Error('Google Sheet 中还没有云端数据');
+      const state = data.state;
+      if(!state.people || !state.statuses || !Array.isArray(state.history)) throw new Error('云端数据格式不正确');
+      save(state);
+      render();
+      setSyncStatus('已读取 ' + new Date().toLocaleTimeString());
+      alert('已从 Google Sheet 读取');
+    }catch(err){
+      console.error(err);
+      setSyncStatus('读取失败');
+      alert('读取失败：' + err.message);
+    }
+  }
+
+  // —— 事件绑定
+  $('#addBtn').addEventListener('click', ()=>{
+    const v = $('#newName').value.trim();
+    const allowDup = $('#allowDup') ? $('#allowDup').checked : false;
+    addPerson(v, allowDup);
+    $('#newName').value='';
+  });
+  $('#newName').addEventListener('keypress', (e)=>{ if(e.key==='Enter') $('#addBtn').click(); });
+  $('#toggleBulkBtn').addEventListener('click', ()=>{
+    const box = $('#bulkBox');
+    box.style.display = (box.style.display==='none' || !box.style.display) ? 'block' : 'none';
+  });
+  $('#bulkAddBtn').addEventListener('click', ()=>{ bulkAdd($('#bulkInput').value, $('#allowDup').checked); $('#bulkInput').value=''; });
+  $('#saveWeekBtn').addEventListener('click', saveThisWeek);
+  $('#resetBtn').addEventListener('click', resetAllToPool);
+  $('#useLastWeekBtn').addEventListener('click', useLastWeekList);
+  $('#overwriteWithLastBtn').addEventListener('click', overwriteWithLastWeekList);
+  $('#exportBtn').addEventListener('click', exportJSON);
+  $('#importBtn').addEventListener('click', ()=> $('#importFile').click());
+  $('#importFile').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) importJSON(f); e.target.value=''; });
+  $('#csvBtn').addEventListener('click', exportCSVForSelectedWeek);
+  $('#allCsvBtn').addEventListener('click', exportAllHistoryCSV);
+  $('#matrixCsvBtn').addEventListener('click', exportMatrixCSV);
+  $('#loadHistoryBtn').addEventListener('click', loadHistoryToUI);
+  $('#downloadSelfBtn').addEventListener('click', downloadSelf);
+  document.getElementById('pngBtn')?.addEventListener('click', exportBoardPNG);
+  document.getElementById('googleSetupBtn')?.addEventListener('click', setupGoogleSync);
+  document.getElementById('googleSaveBtn')?.addEventListener('click', syncToGoogleSheet);
+  document.getElementById('googleLoadBtn')?.addEventListener('click', loadFromGoogleSheet);
+
+  // —— 初始化
+  $('#weekDate').value = nextSunday();
+  render();
+  if(getGoogleScriptUrl()) setSyncStatus('Google 同步已设置');
+})();
+</script>
+</body>
+</html>
