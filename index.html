@@ -1231,6 +1231,13 @@ function exportBoardPNG(){
       const weekISO = $('#weekDate').value || nextSunday();
       state.notes = state.notes || {};
       state.notes[weekISO] = $('#weekNote')?.value || '';
+      // 兼容 Google Sheet 旧版脚本：个人备注既保存在 personNotes，
+      // 也附加到每个人的 note 字段，供表格的 note 列直接读取。
+      state.personNotes = state.personNotes || {};
+      state.people = (state.people||[]).map(person=>({
+        ...person,
+        note: state.personNotes[person.id] || ''
+      }));
       save(state);
 
       const res = await fetch(url, {
@@ -1264,6 +1271,13 @@ function exportBoardPNG(){
       if(!data.state) throw new Error('Google Sheet 中还没有云端数据');
       const state = data.state;
       if(!state.people || !state.statuses || !Array.isArray(state.history)) throw new Error('云端数据格式不正确');
+      // 兼容表格按 people[].note 返回个人备注的格式。
+      state.personNotes = state.personNotes || {};
+      state.people.forEach(person=>{
+        if(person && person.id && typeof person.note === 'string'){
+          state.personNotes[person.id] = person.note;
+        }
+      });
       localStorage.setItem(storeKey, JSON.stringify(state));
       render();
       setSyncStatus('已读取 ' + new Date().toLocaleTimeString());
