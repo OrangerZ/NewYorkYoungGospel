@@ -11,7 +11,7 @@
   header h1 { margin: 0; font-size: 20px; }
   main { padding: 16px; max-width: 1100px; margin: 0 auto;}
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;}
-  .toolbar input[type="text"], .toolbar input[type="date"]{ padding: 8px 10px; border: 1px solid #ccc; border-radius: 10px; outline: none; }
+  .toolbar input[type="text"]{ padding: 8px 10px; border: 1px solid #ccc; border-radius: 10px; outline: none; }
   .toolbar button { padding: 8px 12px; border: 1px solid #ccc; background: #fff; border-radius: 10px; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease, background .12s ease;}
   .toolbar button:hover { background: #f0f0f0; transform: translateY(-1px); box-shadow: 0 6px 14px rgba(0,0,0,.06); }
   .columns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -103,8 +103,6 @@
     <input id="newName" type="text" placeholder="添加人员姓名…">
     <button id="addBtn">添加人员</button>
     <button id="toggleBulkBtn">批量添加</button>
-    <span class="small">本周（周日）日期：</span>
-    <input id="weekDate" type="date">
     <button id="exportBtn">导出JSON</button>
     <input id="importFile" type="file" accept=".json" style="display:none">
     <button id="importBtn">导入JSON</button>
@@ -189,22 +187,6 @@
   const storeKey = 'invite_manager_v2';
 
   const STATUS_LABEL = { pool:"邀请", yes:"确定", maybe:"待定", no:"不来" };
-
-  // —— 本地时区“下一个周日”（若今天是周日，取今天）
-  function nextSunday(d=new Date()){
-    const date = new Date(d.getFullYear(), d.getMonth(), d.getDate()); // 去掉时分秒避免跨天
-    const day = date.getDay(); // 0=Sun
-    const diff = (7 - day) % 7; // Sun->0, Mon->6...
-    date.setDate(date.getDate() + diff);
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2,'0');
-    const dd = String(date.getDate()).padStart(2,'0');
-    return `${y}-${m}-${dd}`;
-  }
-  function fmtDate(iso){
-    const d = new Date(iso + 'T00:00:00');
-    return d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
-  }
 
   // —— 下方分类映射：id -> 'member' | 'friend'
   function ensureBottomTypes(state){
@@ -682,7 +664,6 @@ function exportBoardPNG(){
 
     // ===== 取当前页面数据 =====
     const state   = load();
-    let weekISO = document.getElementById('weekDate')?.value || '';
     let people  = state.people || [];
     let statuses= state.statuses || {};
 
@@ -800,15 +781,11 @@ function exportBoardPNG(){
     // 背景
     ctx.fillStyle = COLORS.bg; ctx.fillRect(0,0,baseW,Hbase);
 
-    // 顶部：标题/日期/顾问
+    // 顶部：标题/顾问
     const topY = P;
 
     setFont(22,true); ctx.fillStyle = COLORS.text; ctx.textAlign = 'center';
     ctx.fillText('主日下午LIC聚会邀请', baseW/2, topY + 24);
-
-    ctx.textAlign = 'left'; setFont(15,false);
-    const dateLabel = weekISO ? ('日期：' + weekISO) : '日期：未选择';
-    ctx.fillText(dateLabel, P, topY + 24);
 
     ctx.textAlign = 'right'; setFont(15,true);
     ctx.fillText('顾问：饶铭杰', baseW - P, topY + 24);
@@ -909,13 +886,13 @@ function exportBoardPNG(){
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'InviteBoard_' + (weekISO || new Date().toISOString().slice(0,10)) + '.png';
+        a.download = 'InviteBoard_' + new Date().toISOString().slice(0,10) + '.png';
         a.click(); URL.revokeObjectURL(url);
       }, 'image/png');
     } else {
       const a = document.createElement('a');
       a.href = canvas.toDataURL('image/png');
-      a.download = 'InviteBoard_' + (weekISO || new Date().toISOString().slice(0,10)) + '.png';
+      a.download = 'InviteBoard_' + new Date().toISOString().slice(0,10) + '.png';
       a.click();
     }
   }catch(e){
@@ -991,7 +968,6 @@ function exportBoardPNG(){
     setSyncStatus('正在同步…');
     try{
       const state = load();
-      const weekISO = $('#weekDate').value || nextSunday();
       // 兼容 Google Sheet 旧版脚本：个人备注既保存在 personNotes，
       // 也附加到每个人的 note 字段，供表格的 note 列直接读取。
       state.personNotes = state.personNotes || {};
@@ -1005,7 +981,7 @@ function exportBoardPNG(){
       const res = await fetch(url, {
         method:'POST',
         headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({ action:'save', state, currentWeek:weekISO })
+        body: JSON.stringify({ action:'save', state })
       });
       const data = await res.json();
       if(!data || !data.ok) throw new Error((data && data.error) || '同步失败');
@@ -1111,7 +1087,6 @@ function exportBoardPNG(){
   });
 
   // —— 初始化
-  $('#weekDate').value = nextSunday();
   render();
   startAutomaticGoogleSync();
 })();
