@@ -109,7 +109,6 @@
     <button id="toggleBulkBtn">批量添加</button>
     <span class="small">本周（周日）日期：</span>
     <input id="weekDate" type="date">
-    <button id="saveWeekBtn">保存本周记录</button>
     <button id="exportBtn">导出JSON</button>
     <input id="importFile" type="file" accept=".json" style="display:none">
     <button id="importBtn">导入JSON</button>
@@ -174,17 +173,6 @@
     <p class="small" style="margin-top:6px;color:#666;">说明：新增默认进入「福音朋友」。下方用于分类与排序，不能重命名/删除；上方的改名/删除会同步这里；可在两框之间拖动并持久化顺序。</p>
   </section>
 
-  <section class="history-panel">
-    <h3 style="margin:0 0 8px 0; font-size:15px;">历史记录 / 回看某周</h3>
-    <div class="toolbar" style="margin-top:0;">
-      <select id="historySelect"></select>
-      <button id="loadHistoryBtn">载入该周到界面（不会覆盖当前历史）</button>
-      <button id="csvBtn">导出选定周CSV</button>
-      <button id="allCsvBtn">导出全历史CSV（明细）</button>
-      <button id="matrixCsvBtn">导出全历史CSV（矩阵）</button>
-    </div>
-    <p class="small" style="margin-top:4px;">提示：“保存本周记录”会产生快照，快照包含“人员名单 + 状态”。</p>
-  </section>
 </main>
 <dialog id="personNoteDialog" class="note-dialog">
   <form method="dialog">
@@ -201,7 +189,7 @@
     </div>
   </form>
 </dialog>
-<footer>数据仅保存在本机浏览器（localStorage）。</footer>
+<footer>数据同步保存到 <a href="https://docs.google.com/spreadsheets/d/15uMfJDmleLfw2-2PaLVU_8a-zSGn7-T8qbXu_082VXs/edit?usp=sharing" target="_blank" rel="noopener noreferrer">Google Sheet</a>。</footer>
 
 <script>
 (function(){
@@ -353,34 +341,6 @@
     render();
   }
 
-  // —— 历史快照（包含人员 + 状态 + 备注）
-  function captureSnapshot(weekISO){
-    const state = load();
-    const snapshot = {
-      week: weekISO,
-      when: new Date().toISOString(),
-      people: state.people.map(p => ({id:p.id, name:p.name})),
-      statuses: {}
-    };
-    state.people.forEach(p => { snapshot.statuses[p.id] = state.statuses[p.id] || 'pool'; });
-
-    // 保存备注
-    const noteText = $('#weekNote')?.value || '';
-    state.notes[weekISO] = noteText;
-
-    const idx = state.history.findIndex(h => h.week === weekISO);
-    if(idx >= 0) state.history[idx] = snapshot; else state.history.push(snapshot);
-    state.history.sort((a,b)=> (a.week < b.week) ? 1 : (a.week > b.week) ? -1 : 0);
-    save(state);
-  }
-
-  function saveThisWeek(){
-    const weekISO = $('#weekDate').value || nextSunday();
-    captureSnapshot(weekISO);
-    alert('已保存：' + fmtDate(weekISO));
-    renderHistorySelect();
-  }
-
   // —— 渲染
   function render(){
     const state = load();
@@ -421,7 +381,6 @@
     enableDnDSortable();     // 顶部四列：可插队拖拽 + 跨列
     enableItemActions();
     renderCounts();
-    renderHistorySelect();
     renderBottomPanel();
 
     // 加载本周备注（若已保存过）
@@ -437,24 +396,6 @@
     $('#count-yes').textContent = counts.yes;
     $('#count-no').textContent = counts.no;
     $('#count-maybe').textContent = counts.maybe;
-  }
-
-  function renderHistorySelect(){
-    const state = load();
-    const sel = $('#historySelect');
-    sel.innerHTML = '';
-    if(!state.history || state.history.length===0){
-      const opt = document.createElement('option');
-      opt.value = ''; opt.textContent = '暂无历史记录';
-      sel.appendChild(opt);
-      return;
-    }
-    state.history.forEach(h => {
-      const opt = document.createElement('option');
-      opt.value = h.week;
-      opt.textContent = `${h.week}（${fmtDate(h.week)}）`;
-      sel.appendChild(opt);
-    });
   }
 
   // —— 下方分类（按 bottomOrder 渲染 + 兜底）
@@ -753,15 +694,12 @@ function exportBoardPNG(){
     const TITLE_H     = 22; // 每个分类框标题高度
     const SECTION_TITLE_H = 20; // “下方分类”标题高度
 
-    // ===== 取数据（优先选中周；分类使用当前页面分类）=====
+    // ===== 取当前页面数据 =====
     const state   = load();
-    const weekSel = document.getElementById('historySelect')?.value || '';
-    const snap    = weekSel ? (state.history||[]).find(h=>h.week===weekSel) : null;
-
-    let weekISO = weekSel || (document.getElementById('weekDate')?.value || '');
-    let people  = snap ? (snap.people   || []) : (state.people   || []);
-    let statuses= snap ? (snap.statuses || {}) : (state.statuses || {});
-    let note    = snap ? (state.notes && state.notes[weekISO]) || '' : (document.getElementById('weekNote')?.value || '');
+    let weekISO = document.getElementById('weekDate')?.value || '';
+    let people  = state.people || [];
+    let statuses= state.statuses || {};
+    let note    = document.getElementById('weekNote')?.value || '';
 
     // 上方四列分桶
     const buckets = { pool:[], yes:[], maybe:[], no:[] };
@@ -1009,144 +947,6 @@ function exportBoardPNG(){
 }
   window.exportBoardPNG = exportBoardPNG;
 
-  // —— CSV 导出（UTF-8 + BOM，避免中文乱码）
-  function exportCSVForSelectedWeek(){
-    const week = $('#historySelect').value;
-    const state = load();
-    const target = state.history.find(h=>h.week===week);
-    if(!target){ alert('请选择历史中的某一周'); return; }
-
-    const nameById = {};
-    (target.people || []).forEach(p => nameById[p.id] = p.name || '');
-
-    const lines = [];
-    lines.push('week,name,确定,邀请,待定,不来');
-
-    const seen = new Set();
-    (target.people || []).forEach(p=>{
-      const name = (nameById[p.id] || p.name || '').trim();
-      if(!name) return;
-      const key = name.toLowerCase();
-      if(seen.has(key)) return;
-      seen.add(key);
-      const stKey = target.statuses[p.id] || 'pool';
-      lines.push([
-        target.week,
-        '"' + name.replace(/"/g,'""') + '"',
-        stKey === 'yes'   ? '1' : '',
-        stKey === 'pool'  ? '1' : '',
-        stKey === 'maybe' ? '1' : '',
-        stKey === 'no'    ? '1' : ''
-      ].join(','));
-    });
-
-    const csv = '\uFEFF' + lines.join('\r\n');
-    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `invite_${target.week}.csv`;
-    a.click(); URL.revokeObjectURL(url);
-  }
-
-  function exportAllHistoryCSV(){
-    const state = load();
-    const hist = (state.history || []).slice().sort((a,b)=> a.week.localeCompare(b.week));
-    if(hist.length === 0){ alert('暂无历史。'); return; }
-
-    const lines = [];
-    lines.push('week,name,确定,邀请,待定,不来');
-
-    hist.forEach(h => {
-      const nameById = {};
-      (h.people || []).forEach(p => { if(p && p.id) nameById[p.id] = p.name || ''; });
-
-      const seenName = new Set();
-      const rows = [];
-      Object.entries(h.statuses || {}).forEach(([pid, stKey])=>{
-        const name = (nameById[pid] || '').trim();
-        if(!name) return;
-        const key = name.toLowerCase();
-        if(seenName.has(key)) return;
-        seenName.add(key);
-        rows.push({ name, stKey: stKey || 'pool' });
-      });
-
-      rows.sort((a,b)=> a.name.localeCompare(b.name, 'zh-Hans-CN'));
-
-      rows.forEach(({name, stKey})=>{
-        lines.push([
-          h.week,
-          '"' + name.replace(/"/g,'""') + '"',
-          stKey === 'yes'   ? '1' : '',
-          stKey === 'pool'  ? '1' : '',
-          stKey === 'maybe' ? '1' : '',
-          stKey === 'no'    ? '1' : ''
-        ].join(','));
-      });
-    });
-
-    const csv = '\uFEFF' + lines.join('\r\n');
-    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'invite_all_history.csv';
-    a.click(); URL.revokeObjectURL(url);
-  }
-
-  function exportMatrixCSV(){
-    const state = load();
-    const hist = (state.history || []).slice().sort((a,b)=> a.week.localeCompare(b.week));
-    if(hist.length === 0){ alert('暂无历史。'); return; }
-
-    const weeks = hist.map(h => h.week);
-
-    const allNames = new Map(); // nameLower -> displayName
-    hist.forEach(h => {
-      (h.people || []).forEach(p => {
-        const nm = (p.name || '').trim();
-        if(!nm) return;
-        const key = nm.toLowerCase();
-        if(!allNames.has(key)) allNames.set(key, nm);
-      });
-    });
-
-    const weekNameToStatus = {};
-    hist.forEach(h => {
-      const map = {};
-      const name2id = {};
-      (h.people || []).forEach(p => { name2id[(p.name||'').trim().toLowerCase()] = p.id; });
-      Object.keys(name2id).forEach(nl => {
-        const pid = name2id[nl];
-        const stKey = (h.statuses && h.statuses[pid]) ? h.statuses[pid] : '';
-        map[nl] = stKey;
-      });
-      weekNameToStatus[h.week] = map;
-    });
-
-    const toLabel = k => ({pool:'邀请', yes:'确定', maybe:'待定', no:'不来'}[k] || '');
-    const lines = [];
-    lines.push('name,' + weeks.join(','));
-
-    Array.from(allNames.entries())
-      .sort((a,b)=> a[1].localeCompare(b[1], 'zh-Hans-CN'))
-      .forEach(([nameLower, displayName]) => {
-        const row = ['"' + displayName.replace(/"/g,'""') + '"'];
-        weeks.forEach(w => {
-          const stKey = (weekNameToStatus[w] && weekNameToStatus[w][nameLower]) || '';
-          const label = toLabel(stKey);
-          row.push('"' + label.replace(/"/g,'""') + '"');
-        });
-        lines.push(row.join(','));
-      });
-
-    const csv = '\uFEFF' + lines.join('\r\n');
-    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'invite_history_matrix.csv';
-    a.click(); URL.revokeObjectURL(url);
-  }
-
   // —— JSON 备份/恢复 & 下载本页
   function exportJSON(){
     const state = load();
@@ -1174,20 +974,6 @@ function exportBoardPNG(){
     };
     reader.readAsText(file);
   }
-  function loadHistoryToUI(){
-    const week = $('#historySelect').value;
-    if(!week){ alert('没有可载入的历史'); return; }
-    const state = load();
-    const h = state.history.find(x => x.week === week);
-    if(!h){ alert('未找到记录'); return; }
-    Object.entries(h.statuses || {}).forEach(([pid, st]) => state.statuses[pid] = st);
-    // 同步备注
-    $('#weekDate').value = week;
-    $('#weekNote').value = state.notes[week] || '';
-    save(state);
-    render();
-  }
-
   // —— Google Sheet 云同步
   const GOOGLE_SCRIPT_URL_KEY = 'invite_manager_google_script_url';
   const DEFAULT_GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMFQf63WaCWHGHMFWNIwab7Qda0cGupq4Q3upB5hS3ake43Xpe3K3Wkqka2vGh6Q-gTw/exec';
@@ -1308,14 +1094,9 @@ function exportBoardPNG(){
     box.style.display = (box.style.display==='none' || !box.style.display) ? 'block' : 'none';
   });
   $('#bulkAddBtn').addEventListener('click', ()=>{ bulkAdd($('#bulkInput').value, $('#allowDup').checked); $('#bulkInput').value=''; });
-  $('#saveWeekBtn').addEventListener('click', saveThisWeek);
   $('#exportBtn').addEventListener('click', exportJSON);
   $('#importBtn').addEventListener('click', ()=> $('#importFile').click());
   $('#importFile').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) importJSON(f); e.target.value=''; });
-  $('#csvBtn').addEventListener('click', exportCSVForSelectedWeek);
-  $('#allCsvBtn').addEventListener('click', exportAllHistoryCSV);
-  $('#matrixCsvBtn').addEventListener('click', exportMatrixCSV);
-  $('#loadHistoryBtn').addEventListener('click', loadHistoryToUI);
   document.getElementById('pngBtn')?.addEventListener('click', exportBoardPNG);
   document.getElementById('googleSetupBtn')?.addEventListener('click', setupGoogleSync);
   document.getElementById('googleSaveBtn')?.addEventListener('click', ()=>syncToGoogleSheet(false));
