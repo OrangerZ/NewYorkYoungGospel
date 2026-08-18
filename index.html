@@ -1024,7 +1024,8 @@ function exportBoardPNG(){
         ...person,
         note: state.personNotes[person.id] || ''
       }));
-      save(state);
+      // 同步过程只更新本地缓存，不再调用 save()，避免触发下一轮自动同步。
+      localStorage.setItem(storeKey, JSON.stringify(state));
 
       const res = await fetch(url, {
         method:'POST',
