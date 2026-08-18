@@ -83,8 +83,11 @@
   .note-dialog form{ padding:18px; }
   .note-dialog h2{ margin:0 0 6px; font-size:18px; }
   .note-dialog .dialog-hint{ margin:0 0 12px; color:#777; font-size:12px; }
-  #personNoteInput{ width:100%; min-height:150px; resize:vertical; padding:10px; border:1px solid #ccc; border-radius:10px; font:inherit; outline:none; }
-  #personNoteInput:focus{ border-color:#818cf8; box-shadow:0 0 0 3px rgba(99,102,241,.14); }
+  .note-dialog label{ display:block; margin:10px 0 5px; color:#555; font-size:13px; font-weight:600; }
+  #personNameInput, #personNoteInput{ width:100%; padding:10px; border:1px solid #ccc; border-radius:10px; font:inherit; outline:none; }
+  #personNoteInput{ min-height:150px; resize:vertical; }
+  #personNameInput:focus, #personNoteInput:focus{ border-color:#818cf8; box-shadow:0 0 0 3px rgba(99,102,241,.14); }
+  #personNameInput[readonly], #personNoteInput[readonly]{ color:#444; background:#f7f7f8; cursor:default; }
   .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
   .dialog-actions button{ padding:8px 14px; border:1px solid #d1d5db; border-radius:9px; background:#fff; cursor:pointer; }
   .dialog-actions .primary{ color:#fff; background:#4f46e5; border-color:#4f46e5; }
@@ -188,12 +191,15 @@
 </main>
 <dialog id="personNoteDialog" class="note-dialog">
   <form method="dialog">
-    <h2 id="personNoteTitle">个人备注</h2>
-    <p class="dialog-hint">备注会自动保存在本机，并随 JSON / Google 同步。</p>
+    <h2 id="personNoteTitle">人员详情</h2>
+    <p id="personNoteHint" class="dialog-hint">查看该人员的信息。</p>
+    <label for="personNameInput">姓名</label>
+    <input id="personNameInput" type="text">
+    <label for="personNoteInput">备注</label>
     <textarea id="personNoteInput" placeholder="记录联系方式、邀请进度或其他信息…"></textarea>
     <div class="dialog-actions">
-      <button type="button" id="cancelPersonNoteBtn">取消</button>
-      <button type="submit" class="primary" value="save">保存</button>
+      <button type="button" id="cancelPersonNoteBtn">关闭</button>
+      <button type="submit" id="savePersonNoteBtn" class="primary" value="save">保存</button>
     </div>
   </form>
 </dialog>
@@ -469,7 +475,7 @@
           <span class="name">${escapeHTML(p.name)}</span>
           <span class="actions">
             <button class="chip${(state.personNotes[p.id]||'').trim() ? ' has-note' : ''}" data-action="details">详情</button>
-            <button class="chip icon-btn" data-action="rename" title="改名" aria-label="改名">
+            <button class="chip icon-btn" data-action="rename" title="编辑姓名和备注" aria-label="编辑姓名和备注">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
             </button>
             <button class="chip icon-btn delete-btn" data-action="delete" title="删除" aria-label="删除">
@@ -736,7 +742,7 @@ function enableItemActions(){
       const state = load();
 
       if(action === 'details'){
-        openPersonNote(id);
+        openPersonNote(id, true);
         return;
       }
 
@@ -770,16 +776,8 @@ function enableItemActions(){
       }
 
       if(action === 'rename'){
-        const p = (state.people||[]).find(p => p.id === id);
-        const oldName = p ? (p.name||'') : '';
-        const nv = prompt('修改姓名：', oldName);
-        const normalized = (nv||'').trim().replace(/\s+/g,' ');
-        if(normalized && p){
-          p.name = normalized;
-          // 下方分类显示的名字来源于 state.people，同步后直接重渲就好
-          save(state);
-          render();
-        }
+        openPersonNote(id, false);
+        return;
       }
     });
   });
@@ -788,16 +786,22 @@ function enableItemActions(){
   // —— 点击姓名编辑个人备注
   let editingPersonNoteId = null;
 
-  function openPersonNote(id){
+  function openPersonNote(id, readOnly=false){
     const state = load();
     const person = (state.people||[]).find(p=>p.id === id);
     if(!person) return;
     editingPersonNoteId = id;
-    $('#personNoteTitle').textContent = person.name + '的备注';
+    $('#personNoteTitle').textContent = readOnly ? '人员详情' : '编辑人员';
+    $('#personNoteHint').textContent = readOnly ? '查看该人员的信息。' : '可同时修改姓名和个人备注。';
+    $('#personNameInput').value = person.name || '';
     $('#personNoteInput').value = (state.personNotes && state.personNotes[id]) || '';
+    $('#personNameInput').readOnly = readOnly;
+    $('#personNoteInput').readOnly = readOnly;
+    $('#savePersonNoteBtn').style.display = readOnly ? 'none' : '';
+    $('#cancelPersonNoteBtn').textContent = readOnly ? '关闭' : '取消';
     $('#personNoteDialog').returnValue = '';
     $('#personNoteDialog').showModal();
-    requestAnimationFrame(()=>$('#personNoteInput').focus());
+    if(!readOnly) requestAnimationFrame(()=>$('#personNameInput').focus());
   }
 
   // —— 工具
@@ -1418,6 +1422,9 @@ function exportBoardPNG(){
       return;
     }
     const state = load();
+    const person = (state.people||[]).find(p=>p.id === editingPersonNoteId);
+    const name = normalizedName($('#personNameInput').value);
+    if(person && name) person.name = name;
     state.personNotes = state.personNotes || {};
     const note = $('#personNoteInput').value.trim();
     if(note) state.personNotes[editingPersonNoteId] = note;
