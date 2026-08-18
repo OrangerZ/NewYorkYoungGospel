@@ -110,13 +110,9 @@
     <span class="small">本周（周日）日期：</span>
     <input id="weekDate" type="date">
     <button id="saveWeekBtn">保存本周记录</button>
-    <button id="resetBtn">一键重置到“邀请”</button>
-    <button id="useLastWeekBtn">沿用上周名单（不删现有）</button>
-    <button id="overwriteWithLastBtn">用上周名单覆盖（会删多余）</button>
     <button id="exportBtn">导出JSON</button>
     <input id="importFile" type="file" accept=".json" style="display:none">
     <button id="importBtn">导入JSON</button>
-    <button id="downloadSelfBtn">下载本程序HTML</button>
     <button id="pngBtn">导出看板PNG</button>
     <button id="googleSetupBtn">设置 Google 同步</button>
     <button id="googleSaveBtn">同步到 Google Sheet</button>
@@ -187,7 +183,7 @@
       <button id="allCsvBtn">导出全历史CSV（明细）</button>
       <button id="matrixCsvBtn">导出全历史CSV（矩阵）</button>
     </div>
-    <p class="small" style="margin-top:4px;">提示：“保存本周记录”会产生快照；“一键重置”会先保存再重置。快照包含“人员名单 + 状态”。</p>
+    <p class="small" style="margin-top:4px;">提示：“保存本周记录”会产生快照，快照包含“人员名单 + 状态”。</p>
   </section>
 </main>
 <dialog id="personNoteDialog" class="note-dialog">
@@ -383,70 +379,6 @@
     captureSnapshot(weekISO);
     alert('已保存：' + fmtDate(weekISO));
     renderHistorySelect();
-  }
-
-  function resetAllToPool(){
-    const weekISO = $('#weekDate').value || nextSunday();
-    captureSnapshot(weekISO);
-    const state = load();
-    state.people.forEach(p => state.statuses[p.id] = 'pool');
-    save(state);
-    render();
-    alert('已保存该周记录并重置为“邀请”。');
-  }
-
-  function latestSnapshot(){
-    const state = load();
-    return (state.history && state.history.length) ? state.history[0] : null;
-  }
-
-  function useLastWeekList(){
-    const snap = latestSnapshot();
-    if(!snap){ alert('没有可用的上周记录，请先保存一次本周记录。'); return; }
-    const state = load();
-
-    const byId = new Set(state.people.map(p=>p.id));
-    const byNameLower = new Set(state.people.map(p=>(p.name||'').trim().toLowerCase()));
-    (snap.people || []).forEach(sp => {
-      if (sp && sp.id && !byId.has(sp.id)) {
-        state.people.push({id: sp.id, name: sp.name || ''});
-        byId.add(sp.id);
-        byNameLower.add((sp.name||'').trim().toLowerCase());
-      } else if (sp && sp.name) {
-        const nm = (sp.name||'').trim();
-        if(!byNameLower.has(nm.toLowerCase())){
-          const id = 'p_' + Math.random().toString(36).slice(2,10);
-          state.people.push({id, name: nm});
-          byId.add(id);
-          byNameLower.add(nm.toLowerCase());
-        }
-      }
-    });
-
-    state.people.forEach(p => state.statuses[p.id] = 'pool');
-    save(state); render();
-    alert('已沿用上周名单（未删除现有人员），并已重置为“邀请”。');
-  }
-
-  function overwriteWithLastWeekList(){
-    const snap = latestSnapshot();
-    if(!snap){ alert('没有可用的上周记录，请先保存一次本周记录。'); return; }
-    if(!confirm('确定用上周名单覆盖当前吗？这会删除当前多余的人员。')) return;
-
-    const state = load();
-    const lastPeople = (snap.people || []).map(sp => ({id: sp.id || ('p_'+Math.random().toString(36).slice(2,10)), name: sp.name || ''}));
-    state.people = lastPeople;
-    state.statuses = {};
-    state.people.forEach(p => state.statuses[p.id] = 'pool');
-
-    // 重建顺序与底部分类
-    state.order = { pool: state.people.map(p=>p.id), yes:[], maybe:[], no:[] };
-    state.bottomTypes = {};
-    state.people.forEach(p=> state.bottomTypes[p.id] = 'friend');
-    state.bottomOrder = { member: [], friend: state.people.map(p=>p.id) };
-
-    save(state); render();
-    alert('已用上周名单覆盖当前，并已重置为“邀请”。');
   }
 
   // —— 渲染
@@ -1077,19 +1009,6 @@ function exportBoardPNG(){
 }
   window.exportBoardPNG = exportBoardPNG;
 
-  // —— 下载当前页面为单个 HTML
-  function downloadSelf(){
-    const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-    const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const date = new Date().toISOString().slice(0,10);
-    a.download = `InviteManager_v2.9_${date}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   // —— CSV 导出（UTF-8 + BOM，避免中文乱码）
   function exportCSVForSelectedWeek(){
     const week = $('#historySelect').value;
@@ -1376,9 +1295,6 @@ function exportBoardPNG(){
   });
   $('#bulkAddBtn').addEventListener('click', ()=>{ bulkAdd($('#bulkInput').value, $('#allowDup').checked); $('#bulkInput').value=''; });
   $('#saveWeekBtn').addEventListener('click', saveThisWeek);
-  $('#resetBtn').addEventListener('click', resetAllToPool);
-  $('#useLastWeekBtn').addEventListener('click', useLastWeekList);
-  $('#overwriteWithLastBtn').addEventListener('click', overwriteWithLastWeekList);
   $('#exportBtn').addEventListener('click', exportJSON);
   $('#importBtn').addEventListener('click', ()=> $('#importFile').click());
   $('#importFile').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) importJSON(f); e.target.value=''; });
@@ -1386,7 +1302,6 @@ function exportBoardPNG(){
   $('#allCsvBtn').addEventListener('click', exportAllHistoryCSV);
   $('#matrixCsvBtn').addEventListener('click', exportMatrixCSV);
   $('#loadHistoryBtn').addEventListener('click', loadHistoryToUI);
-  $('#downloadSelfBtn').addEventListener('click', downloadSelf);
   document.getElementById('pngBtn')?.addEventListener('click', exportBoardPNG);
   document.getElementById('googleSetupBtn')?.addEventListener('click', setupGoogleSync);
   document.getElementById('googleSaveBtn')?.addEventListener('click', ()=>syncToGoogleSheet(false));
