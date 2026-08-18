@@ -25,6 +25,7 @@
   .item.dragging { opacity: 0.6; transform: rotate(-1deg) scale(.98); }
   .drop-hint{ outline: 2px dashed #bbb; outline-offset: -6px; }
   .item .name { font-weight: 600; }
+  .chip.has-note::after{ content:" •"; color:#6366f1; }
   .item .actions { display: flex; gap: 6px; }
   .chip { font-size: 11px; padding: 2px 6px; border-radius: 6px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
   .empty { color: #999; font-size: 13px; text-align: center; padding: 12px;}
@@ -71,6 +72,18 @@
   .blist.drop-hint{ outline:2px dashed #c7d2fe; outline-offset:-6px; }
   .bcol[data-bcat="member"] .btag{ background:#eefbf5; border-color:#d7f3e6; }
   .bcol[data-bcat="friend"] .btag{ background:#f7f7ff; border-color:#e4e6ff; }
+
+  /* 个人备注窗口 */
+  .note-dialog{ width:min(440px, calc(100% - 32px)); padding:0; border:0; border-radius:14px; box-shadow:0 24px 70px rgba(0,0,0,.25); }
+  .note-dialog::backdrop{ background:rgba(17,24,39,.45); }
+  .note-dialog form{ padding:18px; }
+  .note-dialog h2{ margin:0 0 6px; font-size:18px; }
+  .note-dialog .dialog-hint{ margin:0 0 12px; color:#777; font-size:12px; }
+  #personNoteInput{ width:100%; min-height:150px; resize:vertical; padding:10px; border:1px solid #ccc; border-radius:10px; font:inherit; outline:none; }
+  #personNoteInput:focus{ border-color:#818cf8; box-shadow:0 0 0 3px rgba(99,102,241,.14); }
+  .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+  .dialog-actions button{ padding:8px 14px; border:1px solid #d1d5db; border-radius:9px; background:#fff; cursor:pointer; }
+  .dialog-actions .primary{ color:#fff; background:#4f46e5; border-color:#4f46e5; }
 
   @media (max-width: 900px){ .columns { grid-template-columns: repeat(2, 1fr);} }
   @media (max-width: 560px){ .columns { grid-template-columns: 1fr;} }
@@ -169,6 +182,17 @@
     <p class="small" style="margin-top:4px;">提示：“保存本周记录”会产生快照；“一键重置”会先保存再重置。快照包含“人员名单 + 状态”。</p>
   </section>
 </main>
+<dialog id="personNoteDialog" class="note-dialog">
+  <form method="dialog">
+    <h2 id="personNoteTitle">个人备注</h2>
+    <p class="dialog-hint">备注会自动保存在本机，并随 JSON / Google 同步。</p>
+    <textarea id="personNoteInput" placeholder="记录联系方式、邀请进度或其他信息…"></textarea>
+    <div class="dialog-actions">
+      <button type="button" id="cancelPersonNoteBtn">取消</button>
+      <button type="submit" class="primary" value="save">保存</button>
+    </div>
+  </form>
+</dialog>
 <footer>数据仅保存在本机浏览器（localStorage）。</footer>
 
 <script>
@@ -212,7 +236,8 @@
         order: { pool:[], yes:[], maybe:[], no:[] },
         bottomTypes: {},
         bottomOrder: { member:[], friend:[] },
-        notes: {} // weekISO -> note 文本
+        notes: {}, // weekISO -> note 文本
+        personNotes: {} // personId -> note 文本
       };
       localStorage.setItem(storeKey, JSON.stringify(init));
       return init;
@@ -226,6 +251,7 @@
     if(!state.bottomTypes)  state.bottomTypes  = {};
     if(!state.bottomOrder)  state.bottomOrder  = { member:[], friend:[] };
     if(!state.notes)    state.notes    = {};
+    if(!state.personNotes) state.personNotes = {};
 
     ensureBottomTypes(state);
 
@@ -438,6 +464,7 @@
         el.innerHTML = `
           <span class="name">${escapeHTML(p.name)}</span>
           <span class="actions">
+            <button class="chip${(state.personNotes[p.id]||'').trim() ? ' has-note' : ''}" data-action="details">详情</button>
             <button class="chip" data-action="rename">改名</button>
             <button class="chip" data-action="delete">删除</button>
           </span>`;
@@ -700,6 +727,11 @@ function enableItemActions(){
       const id = btn.closest('.item').dataset.id;
       const state = load();
 
+      if(action === 'details'){
+        openPersonNote(id);
+        return;
+      }
+
       if(action === 'delete'){
         if(!confirm('确定删除该人员？')) return;
 
@@ -708,6 +740,9 @@ function enableItemActions(){
 
         // 2) 删除状态
         if(state.statuses) delete state.statuses[id];
+
+        // 同时删除该人员的个人备注
+        if(state.personNotes) delete state.personNotes[id];
 
         // 3) 从四列顺序表移除
         if(!state.order) state.order = { pool:[], yes:[], maybe:[], no:[] };
@@ -741,6 +776,22 @@ function enableItemActions(){
     });
   });
 }
+
+  // —— 点击姓名编辑个人备注
+  let editingPersonNoteId = null;
+
+  function openPersonNote(id){
+    const state = load();
+    const person = (state.people||[]).find(p=>p.id === id);
+    if(!person) return;
+    editingPersonNoteId = id;
+    $('#personNoteTitle').textContent = person.name + '的备注';
+    $('#personNoteInput').value = (state.personNotes && state.personNotes[id]) || '';
+    $('#personNoteDialog').returnValue = '';
+    $('#personNoteDialog').showModal();
+    requestAnimationFrame(()=>$('#personNoteInput').focus());
+  }
+
   // —— 工具
   function escapeHTML(str){
     return (str||'').replace(/[&<>"']/g, s=>({
@@ -1200,6 +1251,7 @@ function exportBoardPNG(){
         if(!obj.bottomTypes) obj.bottomTypes = {};
         if(!obj.bottomOrder) obj.bottomOrder = { member:[], friend:[] };
         if(!obj.notes) obj.notes = {};
+        if(!obj.personNotes) obj.personNotes = {};
         save(obj); render(); alert('导入成功');
       }catch(err){ alert('解析失败：' + err.message); }
     };
@@ -1347,6 +1399,24 @@ function exportBoardPNG(){
     state.notes = state.notes || {};
     state.notes[weekISO] = $('#weekNote').value || '';
     save(state);
+  });
+  $('#cancelPersonNoteBtn').addEventListener('click', ()=>{
+    editingPersonNoteId = null;
+    $('#personNoteDialog').close();
+  });
+  $('#personNoteDialog').addEventListener('close', ()=>{
+    if($('#personNoteDialog').returnValue !== 'save' || !editingPersonNoteId){
+      editingPersonNoteId = null;
+      return;
+    }
+    const state = load();
+    state.personNotes = state.personNotes || {};
+    const note = $('#personNoteInput').value.trim();
+    if(note) state.personNotes[editingPersonNoteId] = note;
+    else delete state.personNotes[editingPersonNoteId];
+    editingPersonNoteId = null;
+    save(state);
+    render();
   });
 
   // —— 初始化
