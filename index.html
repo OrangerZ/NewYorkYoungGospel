@@ -817,6 +817,7 @@
 
     const fallPeople = state.campaigns?.fall2026?.people || [];
     const allPeople = (state.people||[]).concat(fallPeople);
+    const fallIds = new Set(fallPeople.map(p=>p.id));
     const id2p = {}; allPeople.forEach(p=> id2p[p.id]=p);
 
     let memberIds = (state.bottomOrder.member||[]).slice();
@@ -1434,7 +1435,8 @@ function exportBoardPNG(){
       const fallData = getListData(state, 'fall2026');
       fallData.people = (fallData.people||[]).map(person=>({
         ...person,
-        note: fallData.personNotes[person.id] || ''
+        note: fallData.personNotes[person.id] || '',
+        category: state.bottomTypes?.[person.id] || 'friend'
       }));
       // 同步过程只更新本地缓存，不再调用 save()，避免触发下一轮自动同步。
       localStorage.setItem(storeKey, JSON.stringify(state));
