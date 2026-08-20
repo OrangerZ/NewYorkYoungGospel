@@ -353,6 +353,8 @@
   .bottom-panel{ display:none; min-height:0; margin:0; padding:20px; }
   .workspace-layout[data-view="categories"] .board-area{ display:none; }
   .workspace-layout[data-view="categories"] .bottom-panel{ display:block; }
+  .workspace-layout[data-view="notice"] .board-area{ display:none; }
+  .workspace-layout[data-view="notice"] .notice-panel{ display:block; }
   .category-intro{ margin-bottom:17px; padding-bottom:14px; border-bottom:1px solid #ded9cf; }
   .category-intro h3{ margin:0; color:#17233b; font-size:18px; }
   .category-intro p{ margin:5px 0 0; color:#687184; font-size:11px; }
@@ -360,6 +362,18 @@
   .bottom-panel .bcol{ min-height:330px; padding:16px; background:#fff; }
   .bottom-panel .blist{ min-height:260px; align-content:flex-start; }
   .bottom-panel .btag{ padding:8px 11px; font-size:12px; }
+  .notice-panel{ display:none; width:100%; max-width:820px; padding:22px; border:1px solid #d9d5cc; border-radius:14px; background:#fffdf8; box-shadow:0 7px 24px rgba(30,39,54,.055); }
+  .notice-compose{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:9px; padding-bottom:18px; border-bottom:1px solid #e3ded4; }
+  #noticeInput{ width:100%; min-height:42px; padding:10px 12px; border:1px solid #cbc7be; border-radius:9px; outline:none; resize:vertical; font-size:13px; }
+  #noticeInput:focus{ border-color:#7188a7; box-shadow:0 0 0 3px rgba(79,126,217,.10); }
+  #noticeAddBtn{ align-self:start; min-height:42px; padding:8px 17px; border:1px solid #233754; border-radius:9px; color:#fff; background:#233754; cursor:pointer; font-size:12px; font-weight:650; }
+  .notice-list{ display:grid; gap:10px; margin-top:17px; }
+  .notice-item{ padding:15px 16px; border-left:4px solid #f2c94c; border-radius:3px 10px 10px 3px; background:#f8f7f3; }
+  .notice-text{ margin:0; color:#263247; font-size:13px; line-height:1.7; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .notice-meta{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:9px; color:#8a9099; font-size:10px; }
+  .notice-actions{ display:flex; gap:5px; }
+  .notice-actions button{ padding:3px 7px; border:1px solid #d5d1c8; border-radius:6px; color:#596577; background:#fff; cursor:pointer; font-size:10px; }
+  .notice-empty{ padding:35px 10px; color:#969ba3; font-size:12px; text-align:center; }
   @media(max-width:760px){ .view-tabs{width:100%}.view-tab{flex:1}.bottom-panel .bottom-rows{grid-template-columns:1fr}.bottom-panel .bcol{min-height:180px}.bottom-panel .blist{min-height:110px} }
 </style>
 </head>
@@ -421,14 +435,16 @@
   <div class="workspace-heading">
     <div>
       <p class="eyebrow dark">People Care Board</p>
-      <h2>跟进中心</h2>
-      <p>拖动姓名更新进度，点击详情查看个人备注。</p>
+      <h2 id="workspaceTitle">跟进中心</h2>
+      <p id="workspaceDescription">拖动姓名更新进度，点击详情查看个人备注。</p>
     </div>
   </div>
 
   <nav class="view-tabs" aria-label="工作区视图">
     <button type="button" class="view-tab active" data-view-target="board">List</button>
+    <button type="button" class="view-tab" data-view-target="fall2026">2026 Fall 开学季</button>
     <button type="button" class="view-tab" data-view-target="categories">Group</button>
+    <button type="button" class="view-tab" data-view-target="notice">Notice</button>
   </nav>
 
   <div class="workspace-layout" data-view="board">
@@ -470,6 +486,14 @@
       </div>
       <p class="panel-note">新增默认进入「福音朋友」</p>
     </section>
+
+    <section class="notice-panel" aria-label="公告">
+      <div class="notice-compose">
+        <textarea id="noticeInput" rows="2" placeholder="写一条新公告…"></textarea>
+        <button type="button" id="noticeAddBtn">发布公告</button>
+      </div>
+      <div id="noticeList" class="notice-list"></div>
+    </section>
   </div>
   <footer>数据已连接 Google Sheet</footer>
 </main>
@@ -496,13 +520,31 @@
   const storeKey = 'invite_manager_v2';
 
   const STATUS_LABEL = { pool:"邀请", yes:"确定", maybe:"待定", no:"不来" };
+  let activeListKey = 'main';
+
+  function emptyListData(){
+    return {
+      people: [], statuses: {},
+      order: { pool:[], yes:[], maybe:[], no:[] },
+      personNotes: {}
+    };
+  }
+
+  function getListData(state, key=activeListKey){
+    if(key === 'main') return state;
+    state.campaigns = state.campaigns || {};
+    state.campaigns[key] = state.campaigns[key] || emptyListData();
+    return state.campaigns[key];
+  }
 
   // —— 下方分类映射：id -> 'member' | 'friend'
   function ensureBottomTypes(state){
     if(!state.bottomTypes) state.bottomTypes = {};
-    const valid = new Set((state.people||[]).map(p=>p.id));
+    const fallPeople = state.campaigns?.fall2026?.people || [];
+    const allPeople = (state.people||[]).concat(fallPeople);
+    const valid = new Set(allPeople.map(p=>p.id));
     Object.keys(state.bottomTypes).forEach(id=>{ if(!valid.has(id)) delete state.bottomTypes[id]; });
-    (state.people||[]).forEach(p=>{ if(!state.bottomTypes[p.id]) state.bottomTypes[p.id] = 'friend'; });
+    allPeople.forEach(p=>{ if(!state.bottomTypes[p.id]) state.bottomTypes[p.id] = 'friend'; });
   }
 
   // —— 载入（带自修复：四列顺序 + 底部分类/顺序）
@@ -514,7 +556,9 @@
         order: { pool:[], yes:[], maybe:[], no:[] },
         bottomTypes: {},
         bottomOrder: { member:[], friend:[] },
-        personNotes: {} // personId -> note 文本
+        personNotes: {}, // personId -> note 文本
+        campaigns: { fall2026: emptyListData() },
+        notices: []
       };
       localStorage.setItem(storeKey, JSON.stringify(init));
       return init;
@@ -528,6 +572,15 @@
     if(!state.bottomTypes)  state.bottomTypes  = {};
     if(!state.bottomOrder)  state.bottomOrder  = { member:[], friend:[] };
     if(!state.personNotes) state.personNotes = {};
+    if(!state.campaigns) state.campaigns = {};
+    if(!state.campaigns.fall2026) state.campaigns.fall2026 = emptyListData();
+    if(!Array.isArray(state.notices)) state.notices = [];
+
+    const fall = state.campaigns.fall2026;
+    if(!fall.people) fall.people = [];
+    if(!fall.statuses) fall.statuses = {};
+    if(!fall.order) fall.order = { pool:[], yes:[], maybe:[], no:[] };
+    if(!fall.personNotes) fall.personNotes = {};
 
     ensureBottomTypes(state);
 
@@ -543,11 +596,21 @@
       bySt[st].forEach(id=>{ if(!state.order[st].includes(id)) state.order[st].push(id); });
     });
 
-    // 底部顺序自修复
-    ['member','friend'].forEach(k=>{
-      state.bottomOrder[k] = (state.bottomOrder[k]||[]).filter(id=>validIds.has(id));
+    // 开学季四列顺序自修复（独立于主名单）
+    const fallIds = new Set(fall.people.map(p=>p.id));
+    const fallBySt = { pool:[], yes:[], maybe:[], no:[] };
+    fall.people.forEach(p=> fallBySt[fall.statuses[p.id] || 'pool'].push(p.id));
+    ['pool','yes','maybe','no'].forEach(st=>{
+      fall.order[st] = (fall.order[st]||[]).filter(id=>fallIds.has(id) && fallBySt[st].includes(id));
+      fallBySt[st].forEach(id=>{ if(!fall.order[st].includes(id)) fall.order[st].push(id); });
     });
-    state.people.forEach(p=>{
+
+    // Group 顺序自修复（主名单 + 开学季名单）
+    const bottomValidIds = new Set([...validIds, ...fallIds]);
+    ['member','friend'].forEach(k=>{
+      state.bottomOrder[k] = (state.bottomOrder[k]||[]).filter(id=>bottomValidIds.has(id));
+    });
+    state.people.concat(fall.people).forEach(p=>{
       const cat = state.bottomTypes[p.id] || 'friend';
       const arr = state.bottomOrder[cat];
       if(!arr.includes(p.id)) arr.push(p.id);
@@ -568,23 +631,24 @@
   }
 
   function normalizedName(name){ return (name||'').trim().replace(/\s+/g,' '); }
-  function existsByName(state, name){
+  function existsByName(data, name){
     const target = name.toLowerCase();
-    return state.people.some(p => (p.name||'').trim().toLowerCase() === target);
+    return data.people.some(p => (p.name||'').trim().toLowerCase() === target);
   }
 
   function addPerson(name, allowDup=false){
     const state = load();
+    const data = getListData(state);
     const nm = normalizedName(name);
     if(!nm) return;
-    if(!allowDup && existsByName(state, nm)) return;
+    if(!allowDup && existsByName(data, nm)) return;
     const id = 'p_' + Math.random().toString(36).slice(2,10);
-    state.people.push({id, name: nm});
-    state.statuses[id] = 'pool';
+    data.people.push({id, name: nm});
+    data.statuses[id] = 'pool';
 
-    // 顶部顺序：加入“邀请”末尾
-    if(!state.order) state.order = { pool:[], yes:[], maybe:[], no:[] };
-    state.order.pool.push(id);
+    // 顶部顺序：加入“邀请”最前面
+    if(!data.order) data.order = { pool:[], yes:[], maybe:[], no:[] };
+    data.order.pool.unshift(id);
 
     // 下方分类与顺序
     ensureBottomTypes(state);
@@ -599,24 +663,28 @@
     const sep = /[,\n\r;、，；]+/;
     const parts = (text||'').split(sep).map(s => normalizedName(s)).filter(Boolean);
     const state = load();
+    const data = getListData(state);
+    const addedIds = [];
     parts.forEach(nm=>{
-      if(!allowDup && existsByName(state, nm)) return;
+      if(!allowDup && existsByName(data, nm)) return;
       const id = 'p_' + Math.random().toString(36).slice(2,10);
-      state.people.push({id, name: nm});
-      state.statuses[id] = 'pool';
-      if(!state.order) state.order = { pool:[], yes:[], maybe:[], no:[] };
-      state.order.pool.push(id);
+      data.people.push({id, name: nm});
+      data.statuses[id] = 'pool';
+      if(!data.order) data.order = { pool:[], yes:[], maybe:[], no:[] };
+      addedIds.push(id);
       ensureBottomTypes(state);
       if(!state.bottomOrder) state.bottomOrder = { member:[], friend:[] };
       state.bottomTypes[id] = 'friend';
       state.bottomOrder.friend.push(id);
     });
+    // 批量新增整体放在最前面，同时保持输入顺序。
+    data.order.pool = addedIds.concat(data.order.pool);
     save(state); render();
   }
 
   function setStatus(id, status){
     const state = load();
-    state.statuses[id] = status;
+    getListData(state).statuses[id] = status;
     save(state);
     render();
   }
@@ -624,31 +692,32 @@
   // —— 渲染
   function render(){
     const state = load();
+    const data = getListData(state);
     const lists = { pool: $('#list-pool'), yes: $('#list-yes'), maybe: $('#list-maybe'), no: $('#list-no') };
     Object.values(lists).forEach(ul => ul.innerHTML='');
 
-    const id2p = {}; (state.people||[]).forEach(p=> id2p[p.id]=p);
+    const id2p = {}; (data.people||[]).forEach(p=> id2p[p.id]=p);
 
     ['pool','yes','maybe','no'].forEach(st=>{
       const ul = lists[st];
-      let ids = (state.order && state.order[st]) ? state.order[st].slice() : [];
+      let ids = (data.order && data.order[st]) ? data.order[st].slice() : [];
       if(!ids || ids.length === 0){
-        ids = (state.people||[])
-          .filter(p => (state.statuses[p.id] || 'pool') === st)
+        ids = (data.people||[])
+          .filter(p => (data.statuses[p.id] || 'pool') === st)
           .map(p => p.id);
       }
       let has = false;
       ids.forEach(id=>{
         const p = id2p[id];
         if(!p) return;
-        const cur = state.statuses[p.id] || 'pool';
+        const cur = data.statuses[p.id] || 'pool';
         if(cur !== st) return;
         const el = document.createElement('div');
         el.className = 'item'; el.draggable = true; el.dataset.id = p.id;
         el.innerHTML = `
           <span class="name">${escapeHTML(p.name)}</span>
           <span class="actions">
-            <button class="chip${(state.personNotes[p.id]||'').trim() ? ' has-note' : ''}" data-action="details">详情</button>
+            <button class="chip${(data.personNotes[p.id]||'').trim() ? ' has-note' : ''}" data-action="details">详情</button>
             <button class="chip icon-btn" data-action="rename" title="编辑姓名和备注" aria-label="编辑姓名和备注">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
             </button>
@@ -662,17 +731,78 @@
     enableItemActions();
     renderCounts();
     renderBottomPanel();
+    renderNotices();
 
   }
 
   function renderCounts(){
     const state = load();
+    const data = getListData(state);
     const counts = { pool:0, yes:0, no:0, maybe:0 };
-    state.people.forEach(p => { counts[state.statuses[p.id] || 'pool']++; });
+    data.people.forEach(p => { counts[data.statuses[p.id] || 'pool']++; });
     $('#count-pool').textContent = counts.pool;
     $('#count-yes').textContent = counts.yes;
     $('#count-no').textContent = counts.no;
     $('#count-maybe').textContent = counts.maybe;
+  }
+
+  function renderNotices(){
+    const state = load();
+    const list = $('#noticeList');
+    if(!list) return;
+    list.innerHTML = '';
+    const notices = (state.notices||[]).slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+    if(!notices.length){
+      list.innerHTML = '<div class="notice-empty">还没有公告</div>';
+      return;
+    }
+    notices.forEach(notice=>{
+      const item = document.createElement('article');
+      item.className = 'notice-item';
+      const text = document.createElement('p');
+      text.className = 'notice-text';
+      text.textContent = notice.text || '';
+      const meta = document.createElement('div');
+      meta.className = 'notice-meta';
+      const time = document.createElement('span');
+      time.textContent = notice.createdAt ? new Date(notice.createdAt).toLocaleString('zh-CN') : '';
+      const actions = document.createElement('span');
+      actions.className = 'notice-actions';
+      actions.innerHTML = '<button type="button" data-action="edit">编辑</button><button type="button" data-action="delete">删除</button>';
+      actions.addEventListener('click', e=>{
+        const action = e.target.dataset.action;
+        if(!action) return;
+        const latest = load();
+        const target = (latest.notices||[]).find(n=>n.id===notice.id);
+        if(!target) return;
+        if(action === 'edit'){
+          const value = prompt('编辑公告：', target.text || '');
+          if(value === null || !value.trim()) return;
+          target.text = value.trim();
+          target.updatedAt = new Date().toISOString();
+        }else if(action === 'delete'){
+          if(!confirm('确定删除这条公告？')) return;
+          latest.notices = latest.notices.filter(n=>n.id!==notice.id);
+        }
+        save(latest);
+        renderNotices();
+      });
+      meta.append(time, actions);
+      item.append(text, meta);
+      list.appendChild(item);
+    });
+  }
+
+  function addNotice(){
+    const input = $('#noticeInput');
+    const text = (input.value||'').trim();
+    if(!text) return;
+    const state = load();
+    state.notices = state.notices || [];
+    state.notices.push({ id:'n_'+Math.random().toString(36).slice(2,10), text, createdAt:new Date().toISOString() });
+    input.value = '';
+    save(state);
+    renderNotices();
   }
 
   // —— 下方分类（按 bottomOrder 渲染 + 兜底）
@@ -685,12 +815,14 @@
     const friendList = document.getElementById('list-friend');
     memberList.innerHTML = ''; friendList.innerHTML = '';
 
-    const id2p = {}; (state.people||[]).forEach(p=> id2p[p.id]=p);
+    const fallPeople = state.campaigns?.fall2026?.people || [];
+    const allPeople = (state.people||[]).concat(fallPeople);
+    const id2p = {}; allPeople.forEach(p=> id2p[p.id]=p);
 
     let memberIds = (state.bottomOrder.member||[]).slice();
     let friendIds = (state.bottomOrder.friend||[]).slice();
 
-    (state.people||[]).forEach(p=>{
+    allPeople.forEach(p=>{
       const cat = state.bottomTypes[p.id] || 'friend';
       if(cat === 'member'){
         if(!memberIds.includes(p.id)) memberIds.push(p.id);
@@ -774,15 +906,16 @@
         if(!id || !status) return;
 
         const state = load();
-        if(!state.order) state.order = { pool:[], yes:[], maybe:[], no:[] };
+        const data = getListData(state);
+        if(!data.order) data.order = { pool:[], yes:[], maybe:[], no:[] };
 
-        state.statuses[id] = status;
+        data.statuses[id] = status;
         ['pool','yes','maybe','no'].forEach(st=>{
-          state.order[st] = (state.order[st]||[]).filter(x=>x!==id);
+          data.order[st] = (data.order[st]||[]).filter(x=>x!==id);
         });
 
         const ids = [...list.querySelectorAll('.item')].map(x=>x.dataset.id);
-        state.order[status] = ids;
+        data.order[status] = ids;
 
         save(state);
         renderCounts();
@@ -791,10 +924,11 @@
 
     function persistCurrentOrder(){
       const state = load();
+      const data = getListData(state);
       ['pool','yes','maybe','no'].forEach(st=>{
         const list = document.querySelector(`.col[data-status="${st}"] .list`);
         if(!list) return;
-        state.order[st] = [...list.querySelectorAll('.item')].map(x=>x.dataset.id);
+        data.order[st] = [...list.querySelectorAll('.item')].map(x=>x.dataset.id);
       });
       save(state);
     }
@@ -918,13 +1052,14 @@ function enableItemActions(){
 
   function deletePerson(id){
     const state = load();
-    state.people = (state.people||[]).filter(p=>p.id !== id);
-    if(state.statuses) delete state.statuses[id];
-    if(state.personNotes) delete state.personNotes[id];
-    if(state.bottomTypes) delete state.bottomTypes[id];
+    const data = getListData(state);
+    data.people = (data.people||[]).filter(p=>p.id !== id);
+    if(data.statuses) delete data.statuses[id];
+    if(data.personNotes) delete data.personNotes[id];
     ['pool','yes','maybe','no'].forEach(st=>{
-      state.order[st] = (state.order[st]||[]).filter(x=>x !== id);
+      data.order[st] = (data.order[st]||[]).filter(x=>x !== id);
     });
+    if(state.bottomTypes) delete state.bottomTypes[id];
     ['member','friend'].forEach(cat=>{
       state.bottomOrder[cat] = (state.bottomOrder[cat]||[]).filter(x=>x !== id);
     });
@@ -933,7 +1068,8 @@ function enableItemActions(){
 
   function openPersonNote(id, readOnly=false){
     const state = load();
-    const person = (state.people||[]).find(p=>p.id === id);
+    const data = getListData(state);
+    const person = (data.people||[]).find(p=>p.id === id);
     if(!person) return;
     editingPersonNoteId = id;
     const dialog = $('#personNoteDialog');
@@ -942,7 +1078,7 @@ function enableItemActions(){
     $('#personNoteTitle').textContent = readOnly ? (person.name || '详情') : '编辑资料';
     $('#personNoteHint').textContent = readOnly ? '个人详情' : '修改姓名与备注';
     $('#personNameInput').value = person.name || '';
-    $('#personNoteInput').value = (state.personNotes && state.personNotes[id]) || '';
+    $('#personNoteInput').value = (data.personNotes && data.personNotes[id]) || '';
     $('#personNoteInput').placeholder = readOnly ? '暂无备注' : '记录联系方式、邀请进度或其他信息…';
     $('#personNameInput').readOnly = readOnly;
     $('#personNoteInput').readOnly = readOnly;
@@ -987,8 +1123,9 @@ function exportBoardPNG(){
 
     // ===== 取当前页面数据 =====
     const state   = load();
-    let people  = state.people || [];
-    let statuses= state.statuses || {};
+    const activeData = getListData(state);
+    let people  = activeData.people || [];
+    let statuses= activeData.statuses || {};
 
     // 上方四列分桶
     const buckets = { pool:[], yes:[], maybe:[], no:[] };
@@ -1294,6 +1431,11 @@ function exportBoardPNG(){
         ...person,
         note: state.personNotes[person.id] || ''
       }));
+      const fallData = getListData(state, 'fall2026');
+      fallData.people = (fallData.people||[]).map(person=>({
+        ...person,
+        note: fallData.personNotes[person.id] || ''
+      }));
       // 同步过程只更新本地缓存，不再调用 save()，避免触发下一轮自动同步。
       localStorage.setItem(storeKey, JSON.stringify(state));
 
@@ -1333,6 +1475,12 @@ function exportBoardPNG(){
       state.people.forEach(person=>{
         if(person && person.id && typeof person.note === 'string'){
           state.personNotes[person.id] = person.note;
+        }
+      });
+      const fallData = getListData(state, 'fall2026');
+      fallData.people.forEach(person=>{
+        if(person && person.id && typeof person.note === 'string'){
+          fallData.personNotes[person.id] = person.note;
         }
       });
       localStorage.setItem(storeKey, JSON.stringify(state));
@@ -1375,13 +1523,28 @@ function exportBoardPNG(){
   $$('.view-tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
       const view = tab.dataset.viewTarget || 'board';
+      activeListKey = view === 'fall2026' ? 'fall2026' : 'main';
       $('.workspace-layout').dataset.view = view;
+      const titles = {
+        board: ['跟进中心', '拖动姓名更新进度，点击详情查看个人备注。'],
+        categories: ['分组整理', '在弟兄姊妹与福音朋友之间拖动姓名。'],
+        fall2026: ['2026 Fall 开学季', '独立的开学季福音名单，初始为空。'],
+        notice: ['Notice', '发布聚会安排、代祷和服事提醒。']
+      };
+      $('#workspaceTitle').textContent = titles[view][0];
+      $('#workspaceDescription').textContent = titles[view][1];
+      $('#newName').placeholder = view === 'fall2026' ? '添加到开学季…' : '输入姓名…';
       $$('.view-tab').forEach(btn=>{
         const active = btn === tab;
         btn.classList.toggle('active', active);
         btn.setAttribute('aria-selected', active ? 'true' : 'false');
       });
+      render();
     });
+  });
+  $('#noticeAddBtn').addEventListener('click', addNotice);
+  $('#noticeInput').addEventListener('keydown', e=>{
+    if((e.metaKey || e.ctrlKey) && e.key === 'Enter') addNotice();
   });
   $('#cancelPersonNoteBtn').addEventListener('click', ()=>{
     editingPersonNoteId = null;
@@ -1390,7 +1553,7 @@ function exportBoardPNG(){
   $('#deletePersonBtn').addEventListener('click', ()=>{
     if(!editingPersonNoteId) return;
     const state = load();
-    const person = (state.people||[]).find(p=>p.id === editingPersonNoteId);
+    const person = (getListData(state).people||[]).find(p=>p.id === editingPersonNoteId);
     if(!confirm(`确定删除“${person?.name || '该对象'}”？`)) return;
     const id = editingPersonNoteId;
     editingPersonNoteId = null;
@@ -1404,13 +1567,14 @@ function exportBoardPNG(){
       return;
     }
     const state = load();
-    const person = (state.people||[]).find(p=>p.id === editingPersonNoteId);
+    const data = getListData(state);
+    const person = (data.people||[]).find(p=>p.id === editingPersonNoteId);
     const name = normalizedName($('#personNameInput').value);
     if(person && name) person.name = name;
-    state.personNotes = state.personNotes || {};
+    data.personNotes = data.personNotes || {};
     const note = $('#personNoteInput').value.trim();
-    if(note) state.personNotes[editingPersonNoteId] = note;
-    else delete state.personNotes[editingPersonNoteId];
+    if(note) data.personNotes[editingPersonNoteId] = note;
+    else delete data.personNotes[editingPersonNoteId];
     editingPersonNoteId = null;
     save(state);
     render();
