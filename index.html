@@ -608,7 +608,8 @@
     // Group 顺序自修复（主名单 + 开学季名单）
     const bottomValidIds = new Set([...validIds, ...fallIds]);
     ['member','friend'].forEach(k=>{
-      state.bottomOrder[k] = (state.bottomOrder[k]||[]).filter(id=>bottomValidIds.has(id));
+      state.bottomOrder[k] = [...new Set(state.bottomOrder[k]||[])]
+        .filter(id=>bottomValidIds.has(id) && state.bottomTypes[id] === k);
     });
     state.people.concat(fall.people).forEach(p=>{
       const cat = state.bottomTypes[p.id] || 'friend';
@@ -833,15 +834,18 @@
     });
 
     let memberCnt=0, friendCnt=0;
+    const renderedIds = new Set();
     memberIds.forEach(id=>{
-      const p = id2p[id]; if(!p) return;
+      const p = id2p[id]; if(!p || renderedIds.has(id)) return;
+      renderedIds.add(id);
       const tag = document.createElement('div');
       tag.className = 'btag'; tag.draggable = true; tag.dataset.id = id;
       tag.textContent = p.name || '';
       memberList.appendChild(tag); memberCnt++;
     });
     friendIds.forEach(id=>{
-      const p = id2p[id]; if(!p) return;
+      const p = id2p[id]; if(!p || renderedIds.has(id)) return;
+      renderedIds.add(id);
       const tag = document.createElement('div');
       tag.className = 'btag'; tag.draggable = true; tag.dataset.id = id;
       tag.textContent = p.name || '';
