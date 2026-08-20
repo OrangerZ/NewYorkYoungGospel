@@ -725,6 +725,7 @@
   function enableDnDSortable(){
     const cols = $$('.col .list');
     let draggingEl = null;
+    let dropHandled = false;
 
     function getAfterElement(container, y){
       const els = [...container.querySelectorAll('.item:not(.dragging)')];
@@ -742,19 +743,23 @@
     $$('.item').forEach(el=>{
       el.addEventListener('dragstart', e=>{
         draggingEl = el;
+        dropHandled = false;
         el.classList.add('dragging');
         try{ e.dataTransfer.setData('text/plain', el.dataset.id); e.dataTransfer.effectAllowed='move'; }catch(_){}
       });
       el.addEventListener('dragend', ()=>{
         el.classList.remove('dragging');
         draggingEl = null;
-        persistCurrentOrder();
+        // drop 已经保存过时不再重复保存。
+        if(!dropHandled) persistCurrentOrder();
+        dropHandled = false;
       });
     });
 
     cols.forEach(list=>{
       list.addEventListener('dragover', e=>{
         e.preventDefault();
+        list.querySelector('.empty')?.remove();
         const after = getAfterElement(list, e.clientY);
         if(!draggingEl) return;
         if(after == null) list.appendChild(draggingEl);
@@ -763,6 +768,7 @@
 
       list.addEventListener('drop', e=>{
         e.preventDefault();
+        dropHandled = true;
         const id = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || (draggingEl && draggingEl.dataset.id);
         const status = list.parentElement.dataset.status; // pool/yes/maybe/no
         if(!id || !status) return;
@@ -779,7 +785,7 @@
         state.order[status] = ids;
 
         save(state);
-        render();
+        renderCounts();
       });
     });
 
@@ -800,6 +806,7 @@
     const friendList = document.getElementById('list-friend');
     const lists = [memberList, friendList];
     let draggingEl = null;
+    let dropHandled = false;
 
     function getAfterElement(container, y){
       const els = [...container.querySelectorAll('.btag:not(.dragging)')];
@@ -818,13 +825,15 @@
       [...list.querySelectorAll('.btag')].forEach(el=>{
         el.addEventListener('dragstart', e=>{
           draggingEl = el;
+          dropHandled = false;
           el.classList.add('dragging');
           try{ e.dataTransfer.setData('text/plain', el.dataset.id); e.dataTransfer.effectAllowed='move'; }catch(_){}
         });
         el.addEventListener('dragend', ()=>{
           el.classList.remove('dragging');
           draggingEl = null;
-          persistBottomOrder();
+          if(!dropHandled) persistBottomOrder();
+          dropHandled = false;
         });
       });
     });
@@ -843,6 +852,7 @@
       });
       list.addEventListener('drop', e=>{
         e.preventDefault();
+        dropHandled = true;
         list.classList.remove('drop-hint');
 
         const id = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || (draggingEl && draggingEl.dataset.id);
