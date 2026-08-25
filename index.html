@@ -230,6 +230,10 @@
   .note-dialog.view-mode .dialog-actions{ margin-top:7px; padding-top:14px; border-top:1px solid #e6dfd2; }
   .note-dialog.edit-mode #personNoteInput{ min-height:280px; }
   @media(max-width:580px){ .note-dialog form,.note-dialog.view-mode form{padding:20px}.note-dialog.view-mode #personNoteInput{min-height:210px}.note-dialog.edit-mode #personNoteInput{min-height:230px} }
+  @media(max-width:760px){
+    #personNameInput,#personNoteInput,#noticeInput{ font-size:16px; }
+    .note-dialog.view-mode #personNoteInput{ font-size:16px; }
+  }
 
   /* 统一为适合中文屏幕阅读的字体 */
   body,button,input,textarea{
@@ -1088,6 +1092,8 @@ function enableItemActions(){
     $('#personNoteInput').placeholder = readOnly ? '暂无备注' : '记录联系方式、邀请进度或其他信息…';
     $('#personNameInput').readOnly = readOnly;
     $('#personNoteInput').readOnly = readOnly;
+    $('#personNameInput').tabIndex = readOnly ? -1 : 0;
+    $('#personNoteInput').tabIndex = readOnly ? -1 : 0;
     $('#savePersonNoteBtn').style.display = readOnly ? 'none' : '';
     $('#deletePersonBtn').style.display = readOnly ? 'none' : '';
     $('#cancelPersonNoteBtn').textContent = readOnly ? '关闭' : '取消';
@@ -1556,6 +1562,13 @@ function exportBoardPNG(){
   $('#cancelPersonNoteBtn').addEventListener('click', ()=>{
     editingPersonNoteId = null;
     $('#personNoteDialog').close();
+  });
+  $('#personNoteDialog').addEventListener('click', e=>{
+    const dialog = $('#personNoteDialog');
+    if(e.target === dialog && dialog.classList.contains('view-mode')){
+      editingPersonNoteId = null;
+      dialog.close();
+    }
   });
   $('#deletePersonBtn').addEventListener('click', ()=>{
     if(!editingPersonNoteId) return;
