@@ -562,6 +562,7 @@
         bottomTypes: {},
         bottomOrder: { member:[], friend:[] },
         personNotes: {}, // personId -> note 文本
+        deletedPeople: { main:[], fall2026:[] },
         campaigns: { fall2026: emptyListData() },
         notices: []
       };
@@ -577,6 +578,9 @@
     if(!state.bottomTypes)  state.bottomTypes  = {};
     if(!state.bottomOrder)  state.bottomOrder  = { member:[], friend:[] };
     if(!state.personNotes) state.personNotes = {};
+    if(!state.deletedPeople) state.deletedPeople = { main:[], fall2026:[] };
+    if(!Array.isArray(state.deletedPeople.main)) state.deletedPeople.main = [];
+    if(!Array.isArray(state.deletedPeople.fall2026)) state.deletedPeople.fall2026 = [];
     if(!state.campaigns) state.campaigns = {};
     if(!state.campaigns.fall2026) state.campaigns.fall2026 = emptyListData();
     if(!Array.isArray(state.notices)) state.notices = [];
@@ -627,9 +631,11 @@
   let autoSyncEnabled = false;
   let autoSyncTimer = null;
   let localChangesPending = false;
+  let localRevision = 0;
 
   function save(state){
     localStorage.setItem(storeKey, JSON.stringify(state));
+    localRevision += 1;
     if(autoSyncEnabled){
       localChangesPending = true;
       scheduleAutoSync();
@@ -1063,6 +1069,10 @@ function enableItemActions(){
   function deletePerson(id){
     const state = load();
     const data = getListData(state);
+    state.deletedPeople = state.deletedPeople || { main:[], fall2026:[] };
+    const deletedKey = activeListKey === 'fall2026' ? 'fall2026' : 'main';
+    state.deletedPeople[deletedKey] = state.deletedPeople[deletedKey] || [];
+    if(!state.deletedPeople[deletedKey].includes(id)) state.deletedPeople[deletedKey].push(id);
     data.people = (data.people||[]).filter(p=>p.id !== id);
     if(data.statuses) delete data.statuses[id];
     if(data.personNotes) delete data.personNotes[id];
@@ -1436,6 +1446,7 @@ function exportBoardPNG(){
     setSyncStatus('正在同步…');
     try{
       const state = load();
+      const revisionAtStart = localRevision;
       // 兼容 Google Sheet 旧版脚本：个人备注既保存在 personNotes，
       // 也附加到每个人的 note 字段，供表格的 note 列直接读取。
       state.personNotes = state.personNotes || {};
@@ -1459,6 +1470,12 @@ function exportBoardPNG(){
       });
       const data = await res.json();
       if(!data || !data.ok) throw new Error((data && data.error) || '同步失败');
+      // 云端会合并其他设备刚保存的人员。当前同步期间若本机没有新改动，
+      // 立即采用合并后的版本，避免下一次操作仍基于旧名单。
+      if(data.state && localRevision === revisionAtStart){
+        localStorage.setItem(storeKey, JSON.stringify(data.state));
+        render();
+      }
       setSyncStatus('已同步 ' + new Date().toLocaleTimeString());
       localChangesPending = false;
       if(!silent) alert('已同步到 Google Sheet');
