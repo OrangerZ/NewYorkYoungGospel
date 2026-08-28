@@ -658,7 +658,7 @@
     data.people.push({id, name: nm});
     data.statuses[id] = 'pool';
 
-    // 顶部顺序：加入“邀请”最前面
+    // 最新添加的人放在“邀请”最前面。
     if(!data.order) data.order = { pool:[], yes:[], maybe:[], no:[] };
     data.order.pool.unshift(id);
 
@@ -666,7 +666,7 @@
     ensureBottomTypes(state);
     state.bottomTypes[id] = 'friend';
     if(!state.bottomOrder) state.bottomOrder = { member:[], friend:[] };
-    state.bottomOrder.friend.push(id);
+    state.bottomOrder.friend.unshift(id);
 
     save(state); render();
   }
@@ -687,10 +687,10 @@
       ensureBottomTypes(state);
       if(!state.bottomOrder) state.bottomOrder = { member:[], friend:[] };
       state.bottomTypes[id] = 'friend';
-      state.bottomOrder.friend.push(id);
     });
-    // 批量新增整体放在最前面，同时保持输入顺序。
+    // 整批放到最前面，并保持本次输入的姓名顺序。
     data.order.pool = addedIds.concat(data.order.pool);
+    state.bottomOrder.friend = addedIds.concat(state.bottomOrder.friend);
     save(state); render();
   }
 
