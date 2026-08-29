@@ -69,15 +69,15 @@
   .drop-hint{ outline:2px dashed #9eafc8; outline-offset:-6px; background:#f2f6fb; }
   .bottom-panel{ margin-top:20px; padding:20px; border:1px solid var(--line); border-radius:18px; background:var(--paper); box-shadow:0 8px 28px rgba(30,39,54,.06); }
   .panel-heading{ display:flex; justify-content:space-between; align-items:start; gap:18px; margin-bottom:15px; }
-  .bottom-rows{ display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+  .bottom-rows{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:13px; }
   .bcol{ min-height:116px; padding:14px; border:1px solid #e3ded3; border-radius:13px; background:#faf8f3; }
   .bcol h4{ margin:0 0 11px; display:flex; align-items:center; gap:7px; font-size:13px; }
   .bcol h4::before{ content:""; width:8px; height:8px; border-radius:50%; background:#6780a3; }
-  .bcol[data-bcat="member"] h4::before{ background:var(--yes); }.bcol[data-bcat="friend"] h4::before{ background:var(--gold); }
+  .bcol[data-bcat="member"] h4::before{ background:var(--yes); }.bcol[data-bcat="baptism"] h4::before{ background:#7189b8; }.bcol[data-bcat="friend"] h4::before{ background:var(--gold); }
   .bcount{ color:var(--muted); font-size:11px; }
   .blist{ min-height:48px; display:flex; flex-wrap:wrap; align-content:flex-start; gap:7px; }
   .btag{ padding:7px 10px; border:1px solid #ded9ce; border-radius:999px; background:#fff; cursor:grab; user-select:none; font-size:12px; line-height:1; }
-  .bcol[data-bcat="member"] .btag{ color:#246a56; border-color:#cae2da; background:#f0f8f5; }.bcol[data-bcat="friend"] .btag{ color:#7c5b20; border-color:#ead9b8; background:#fff8e9; }
+  .bcol[data-bcat="member"] .btag{ color:#246a56; border-color:#cae2da; background:#f0f8f5; }.bcol[data-bcat="baptism"] .btag{ color:#425b8b; border-color:#d2daeb; background:#f2f5fb; }.bcol[data-bcat="friend"] .btag{ color:#7c5b20; border-color:#ead9b8; background:#fff8e9; }
   .panel-note{ margin:12px 1px 0; color:var(--muted); font-size:11px; }
   .note-dialog{ width:min(470px,calc(100% - 28px)); padding:0; overflow:hidden; border:1px solid #dfd8cb; border-radius:18px; color:var(--ink); background:var(--paper); box-shadow:0 28px 80px rgba(15,27,45,.28); }
   .note-dialog::backdrop{ background:rgba(12,23,40,.56); backdrop-filter:blur(3px); }
@@ -146,7 +146,7 @@
   .blist{ min-height:100px; }
   .panel-note{ margin-top:15px; line-height:1.6; }
   .workspace footer{ padding:21px 0 0; text-align:left; }
-  @media(max-width:1050px){ .app-shell{grid-template-columns:240px minmax(0,1fr)}.sidebar{padding-left:17px;padding-right:17px}.workspace{padding:28px 24px}.workspace-layout{grid-template-columns:1fr}.bottom-panel{position:static;min-height:0}.bottom-rows{grid-template-columns:1fr 1fr}.bcol{min-height:120px}.blist{min-height:55px} }
+  @media(max-width:1050px){ .app-shell{grid-template-columns:240px minmax(0,1fr)}.sidebar{padding-left:17px;padding-right:17px}.workspace{padding:28px 24px}.workspace-layout{grid-template-columns:1fr}.bottom-panel{position:static;min-height:0}.bottom-rows{grid-template-columns:repeat(3,minmax(0,1fr))}.bcol{min-height:120px}.blist{min-height:55px} }
   @media(max-width:760px){ .app-shell{display:block}.sidebar{position:relative;height:auto;overflow:visible;padding:20px}.sidebar header h1{max-width:none}.sidebar .subtitle{padding-bottom:15px}.control-panel{padding-top:16px}.side-section{margin-top:14px;padding-top:14px}.sheet-link{display:inline-block;margin-top:18px;padding-top:0}.workspace{padding:25px 14px}.workspace-heading h2{font-size:26px}.columns{grid-template-columns:1fr}.col{min-height:220px}.bottom-rows{grid-template-columns:1fr}.utility-grid{grid-template-columns:repeat(3,1fr)}.utility-grid button:last-child{grid-column:auto} }
 
   /* 紧凑桌面布局：同屏显示四个状态列 */
@@ -178,7 +178,7 @@
   .bcol{ min-height:140px; padding:9px; }
   .blist{ min-height:78px; gap:4px; }
   .btag{ padding:5px 7px; font-size:10px; }
-  @media(max-width:1150px){ .workspace-layout{grid-template-columns:1fr}.bottom-panel{position:static;min-height:0}.bottom-rows{grid-template-columns:1fr 1fr}.bcol{min-height:105px}.blist{min-height:48px} }
+  @media(max-width:1150px){ .workspace-layout{grid-template-columns:1fr}.bottom-panel{position:static;min-height:0}.bottom-rows{grid-template-columns:repeat(3,minmax(0,1fr))}.bcol{min-height:105px}.blist{min-height:48px} }
   @media(max-width:900px){ .columns{grid-template-columns:repeat(2,1fr)}.col{min-height:280px} }
   @media(max-width:760px){ .app-shell{display:block}.columns{grid-template-columns:1fr}.sidebar{padding:18px}.workspace{padding:22px 12px} }
 
@@ -186,7 +186,7 @@
   .workspace-layout{ width:100%; min-width:0; display:flex; flex-direction:column; align-items:stretch; gap:10px; }
   .bottom-panel{ position:static; order:-1; min-height:0; padding:12px; }
   .bottom-panel .panel-heading{ margin-bottom:9px; }
-  .bottom-rows{ grid-template-columns:1fr 1fr; gap:9px; }
+  .bottom-rows{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
   .bcol{ min-height:82px; }
   .blist{ min-height:38px; }
   .board-area{ order:1; width:100%; min-width:0; }
@@ -363,7 +363,7 @@
   .category-intro{ margin-bottom:17px; padding-bottom:14px; border-bottom:1px solid #ded9cf; }
   .category-intro h3{ margin:0; color:#17233b; font-size:18px; }
   .category-intro p{ margin:5px 0 0; color:#687184; font-size:11px; }
-  .bottom-panel .bottom-rows{ grid-template-columns:1fr 1fr; gap:14px; }
+  .bottom-panel .bottom-rows{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
   .bottom-panel .bcol{ min-height:330px; padding:16px; background:#fff; }
   .bottom-panel .blist{ min-height:260px; align-content:flex-start; }
   .bottom-panel .btag{ padding:8px 11px; font-size:12px; }
@@ -477,12 +477,16 @@
     <section class="bottom-panel">
       <div class="category-intro">
         <h3>按身份整理名单</h3>
-        <p>在两个区域之间拖动姓名，即可更新归类。</p>
+        <p>在三个区域之间拖动姓名，即可更新归类。</p>
       </div>
       <div class="bottom-rows">
         <div class="bcol" data-bcat="member">
           <h4>弟兄姊妹 <span class="bcount" id="bcount-member">0</span></h4>
           <div class="blist" id="list-member"></div>
+        </div>
+        <div class="bcol" data-bcat="baptism">
+          <h4>预备受浸 <span class="bcount" id="bcount-baptism">0</span></h4>
+          <div class="blist" id="list-baptism"></div>
         </div>
         <div class="bcol" data-bcat="friend">
           <h4>福音朋友 <span class="bcount" id="bcount-friend">0</span></h4>
@@ -542,7 +546,7 @@
     return state.campaigns[key];
   }
 
-  // —— 下方分类映射：id -> 'member' | 'friend'
+  // —— 下方分类映射：id -> 'member' | 'baptism' | 'friend'
   function ensureBottomTypes(state){
     if(!state.bottomTypes) state.bottomTypes = {};
     const fallPeople = state.campaigns?.fall2026?.people || [];
@@ -560,7 +564,7 @@
         people: [], statuses: {}, history: [],
         order: { pool:[], yes:[], maybe:[], no:[] },
         bottomTypes: {},
-        bottomOrder: { member:[], friend:[] },
+        bottomOrder: { member:[], baptism:[], friend:[] },
         personNotes: {}, // personId -> note 文本
         deletedPeople: { main:[], fall2026:[] },
         campaigns: { fall2026: emptyListData() },
@@ -576,7 +580,7 @@
     if(!state.history)  state.history  = [];
     if(!state.order)    state.order    = { pool:[], yes:[], maybe:[], no:[] };
     if(!state.bottomTypes)  state.bottomTypes  = {};
-    if(!state.bottomOrder)  state.bottomOrder  = { member:[], friend:[] };
+    if(!state.bottomOrder)  state.bottomOrder  = { member:[], baptism:[], friend:[] };
     if(!state.personNotes) state.personNotes = {};
     if(!state.deletedPeople) state.deletedPeople = { main:[], fall2026:[] };
     if(!Array.isArray(state.deletedPeople.main)) state.deletedPeople.main = [];
@@ -616,7 +620,7 @@
 
     // Group 顺序自修复（主名单 + 开学季名单）
     const bottomValidIds = new Set([...validIds, ...fallIds]);
-    ['member','friend'].forEach(k=>{
+    ['member','baptism','friend'].forEach(k=>{
       state.bottomOrder[k] = [...new Set(state.bottomOrder[k]||[])]
         .filter(id=>bottomValidIds.has(id) && state.bottomTypes[id] === k);
     });
@@ -665,7 +669,7 @@
     // 下方分类与顺序
     ensureBottomTypes(state);
     state.bottomTypes[id] = 'friend';
-    if(!state.bottomOrder) state.bottomOrder = { member:[], friend:[] };
+    if(!state.bottomOrder) state.bottomOrder = { member:[], baptism:[], friend:[] };
     state.bottomOrder.friend.unshift(id);
 
     save(state); render();
@@ -685,7 +689,7 @@
       if(!data.order) data.order = { pool:[], yes:[], maybe:[], no:[] };
       addedIds.push(id);
       ensureBottomTypes(state);
-      if(!state.bottomOrder) state.bottomOrder = { member:[], friend:[] };
+      if(!state.bottomOrder) state.bottomOrder = { member:[], baptism:[], friend:[] };
       state.bottomTypes[id] = 'friend';
     });
     // 整批放到最前面，并保持本次输入的姓名顺序。
@@ -821,11 +825,12 @@
   function renderBottomPanel(){
     const state = load();
     ensureBottomTypes(state);
-    if(!state.bottomOrder) state.bottomOrder = { member: [], friend: [] };
+    if(!state.bottomOrder) state.bottomOrder = { member: [], baptism: [], friend: [] };
 
     const memberList = document.getElementById('list-member');
+    const baptismList = document.getElementById('list-baptism');
     const friendList = document.getElementById('list-friend');
-    memberList.innerHTML = ''; friendList.innerHTML = '';
+    memberList.innerHTML = ''; baptismList.innerHTML = ''; friendList.innerHTML = '';
 
     const fallPeople = state.campaigns?.fall2026?.people || [];
     const allPeople = (state.people||[]).concat(fallPeople);
@@ -833,18 +838,21 @@
     const id2p = {}; allPeople.forEach(p=> id2p[p.id]=p);
 
     let memberIds = (state.bottomOrder.member||[]).slice();
+    let baptismIds = (state.bottomOrder.baptism||[]).slice();
     let friendIds = (state.bottomOrder.friend||[]).slice();
 
     allPeople.forEach(p=>{
       const cat = state.bottomTypes[p.id] || 'friend';
       if(cat === 'member'){
         if(!memberIds.includes(p.id)) memberIds.push(p.id);
+      }else if(cat === 'baptism'){
+        if(!baptismIds.includes(p.id)) baptismIds.push(p.id);
       }else{
         if(!friendIds.includes(p.id)) friendIds.push(p.id);
       }
     });
 
-    let memberCnt=0, friendCnt=0;
+    let memberCnt=0, baptismCnt=0, friendCnt=0;
     const renderedIds = new Set();
     memberIds.forEach(id=>{
       const p = id2p[id]; if(!p || renderedIds.has(id)) return;
@@ -853,6 +861,14 @@
       tag.className = 'btag'; tag.draggable = true; tag.dataset.id = id;
       tag.textContent = p.name || '';
       memberList.appendChild(tag); memberCnt++;
+    });
+    baptismIds.forEach(id=>{
+      const p = id2p[id]; if(!p || renderedIds.has(id)) return;
+      renderedIds.add(id);
+      const tag = document.createElement('div');
+      tag.className = 'btag'; tag.draggable = true; tag.dataset.id = id;
+      tag.textContent = p.name || '';
+      baptismList.appendChild(tag); baptismCnt++;
     });
     friendIds.forEach(id=>{
       const p = id2p[id]; if(!p || renderedIds.has(id)) return;
@@ -864,6 +880,7 @@
     });
 
     document.getElementById('bcount-member').textContent = memberCnt;
+    document.getElementById('bcount-baptism').textContent = baptismCnt;
     document.getElementById('bcount-friend').textContent = friendCnt;
 
     enableBottomDnDSortable();
@@ -953,8 +970,9 @@
   // —— 下方分类拖拽：列内排序 + 跨列移动 + 持久化
   function enableBottomDnDSortable(){
     const memberList = document.getElementById('list-member');
+    const baptismList = document.getElementById('list-baptism');
     const friendList = document.getElementById('list-friend');
-    const lists = [memberList, friendList];
+    const lists = [memberList, baptismList, friendList];
     let draggingEl = null;
     let dropHandled = false;
 
@@ -1010,12 +1028,12 @@
 
         const state = load();
         if(!state.bottomTypes) state.bottomTypes = {};
-        if(!state.bottomOrder) state.bottomOrder = { member:[], friend:[] };
+        if(!state.bottomOrder) state.bottomOrder = { member:[], baptism:[], friend:[] };
 
-        const targetCat = (list.id === 'list-member') ? 'member' : 'friend';
+        const targetCat = list.id === 'list-member' ? 'member' : (list.id === 'list-baptism' ? 'baptism' : 'friend');
         state.bottomTypes[id] = targetCat;
 
-        ['member','friend'].forEach(k=>{
+        ['member','baptism','friend'].forEach(k=>{
           state.bottomOrder[k] = (state.bottomOrder[k]||[]).filter(x=>x!==id);
         });
 
@@ -1024,14 +1042,16 @@
 
         save(state);
         document.getElementById('bcount-member').textContent = memberList.querySelectorAll('.btag').length;
+        document.getElementById('bcount-baptism').textContent = baptismList.querySelectorAll('.btag').length;
         document.getElementById('bcount-friend').textContent = friendList.querySelectorAll('.btag').length;
       });
     });
 
     function persistBottomOrder(){
       const state = load();
-      if(!state.bottomOrder) state.bottomOrder = { member:[], friend:[] };
+      if(!state.bottomOrder) state.bottomOrder = { member:[], baptism:[], friend:[] };
       state.bottomOrder.member = [...memberList.querySelectorAll('.btag')].map(x=>x.dataset.id);
+      state.bottomOrder.baptism = [...baptismList.querySelectorAll('.btag')].map(x=>x.dataset.id);
       state.bottomOrder.friend = [...friendList.querySelectorAll('.btag')].map(x=>x.dataset.id);
       save(state);
     }
@@ -1080,7 +1100,7 @@ function enableItemActions(){
       data.order[st] = (data.order[st]||[]).filter(x=>x !== id);
     });
     if(state.bottomTypes) delete state.bottomTypes[id];
-    ['member','friend'].forEach(cat=>{
+    ['member','baptism','friend'].forEach(cat=>{
       state.bottomOrder[cat] = (state.bottomOrder[cat]||[]).filter(x=>x !== id);
     });
     save(state);
@@ -1159,7 +1179,7 @@ function exportBoardPNG(){
     // —— 下方分类的数据（用当前页面的分类与顺序）
     const id2name = {}; (people||[]).forEach(p=> id2name[p.id] = p.name || '');
     const bottomTypes = state.bottomTypes || {};
-    const bottomOrder = state.bottomOrder || {member:[], friend:[]};
+    const bottomOrder = state.bottomOrder || {member:[], baptism:[], friend:[]};
 
     function collectBottom(cat){
       const ordered = (bottomOrder[cat]||[]).filter(id=>id2name[id]).map(id=>id2name[id]);
@@ -1173,6 +1193,7 @@ function exportBoardPNG(){
       return ordered.concat(extra);
     }
     const members = collectBottom('member');
+    const baptisms = collectBottom('baptism');
     const friends = collectBottom('friend');
 
     // ===== 先预计算高度（需要测量文本宽度）=====
@@ -1190,9 +1211,9 @@ function exportBoardPNG(){
     const BODY_H  = 40 + (ROW_H + ROW_GAP) * colsMaxRows; // 上方四列高度（卡片区）
     const topPartH = P + HEADER_H + BODY_H;               // 上方总高（不含页脚）
 
-    // 分类框宽度（两列）
+    // 分类框宽度（三列）
     const totalW  = baseW - P*2;
-    const boxW    = (totalW - BOX_GAP) / 2;
+    const boxW    = (totalW - BOX_GAP*2) / 3;
 
     function measureBoxHeight(names){
       let x = 0, rows = 0;
@@ -1214,8 +1235,9 @@ function exportBoardPNG(){
       return BOX_PAD + TITLE_H + 6 + rows*TAG_H + (rows-1)*TAG_GAP + BOX_PAD;
     }
     const memberBoxH = measureBoxHeight(members);
+    const baptismBoxH = measureBoxHeight(baptisms);
     const friendBoxH = measureBoxHeight(friends);
-    const bottomBoxesH = Math.max(memberBoxH, friendBoxH);
+    const bottomBoxesH = Math.max(memberBoxH, baptismBoxH, friendBoxH);
     const bottomSectionH = SECTION_GAP + SECTION_TITLE_H + 8 + bottomBoxesH; // 包含“下方分类”标题
 
     // 总高度
@@ -1310,7 +1332,7 @@ function exportBoardPNG(){
 
     // ===== 两个分类框（等高）=====
     const boxesTop = sectionTop + SECTION_TITLE_H + 8;
-    const boxX1 = P, boxX2 = P + boxW + BOX_GAP;
+    const boxX1 = P, boxX2 = P + boxW + BOX_GAP, boxX3 = P + (boxW + BOX_GAP)*2;
 
     // 画一个分类框的函数
     function drawBox(x, y, w, h, title, color, names){
@@ -1352,7 +1374,8 @@ function exportBoardPNG(){
     }
 
     drawBox(boxX1, boxesTop, boxW, bottomBoxesH, '弟兄姊妹', '#35c28d', members);
-    drawBox(boxX2, boxesTop, boxW, bottomBoxesH, '福音朋友', '#6aa5ff', friends);
+    drawBox(boxX2, boxesTop, boxW, bottomBoxesH, '预备受浸', '#7189b8', baptisms);
+    drawBox(boxX3, boxesTop, boxW, bottomBoxesH, '福音朋友', '#d2a84b', friends);
 
     // 页脚
     setFont(11,false); ctx.fillStyle = '#888';
@@ -1399,7 +1422,7 @@ function exportBoardPNG(){
         }
         if(!obj.order) obj.order = { pool:[], yes:[], maybe:[], no:[] };
         if(!obj.bottomTypes) obj.bottomTypes = {};
-        if(!obj.bottomOrder) obj.bottomOrder = { member:[], friend:[] };
+        if(!obj.bottomOrder) obj.bottomOrder = { member:[], baptism:[], friend:[] };
         if(!obj.notes) obj.notes = {};
         if(!obj.personNotes) obj.personNotes = {};
         save(obj); render(); alert('导入成功');
@@ -1557,7 +1580,7 @@ function exportBoardPNG(){
       $('.workspace-layout').dataset.view = view;
       const titles = {
         board: ['跟进中心', '拖动姓名更新进度，点击详情查看个人备注。'],
-        categories: ['分组整理', '在弟兄姊妹与福音朋友之间拖动姓名。'],
+        categories: ['分组整理', '在弟兄姊妹、预备受浸与福音朋友之间拖动姓名。'],
         fall2026: ['2026 Fall 开学季', '独立的开学季福音名单，初始为空。'],
         notice: ['Notice', '发布聚会安排、代祷和服事提醒。']
       };
