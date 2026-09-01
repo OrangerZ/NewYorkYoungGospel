@@ -528,8 +528,17 @@
   const $$ = (sel)=>Array.from(document.querySelectorAll(sel));
   const storeKey = 'invite_manager_v2';
 
-  const STATUS_LABEL = { pool:"邀请", yes:"确定", maybe:"待定", no:"不来" };
+  const MAIN_STATUS_LABEL = { pool:"邀请", yes:"确定", maybe:"待定", no:"不来" };
+  const FALL_STATUS_LABEL = { pool:"遇到的", yes:"积极回复", maybe:"很少回复", no:"几乎不会" };
   let activeListKey = 'main';
+
+  function updateStatusHeadings(){
+    const labels = activeListKey === 'fall2026' ? FALL_STATUS_LABEL : MAIN_STATUS_LABEL;
+    ['pool','yes','maybe','no'].forEach(status=>{
+      const title = document.querySelector(`.col[data-status="${status}"] h3 span:first-child`);
+      if(title) title.textContent = labels[status];
+    });
+  }
 
   function emptyListData(){
     return {
@@ -1289,14 +1298,15 @@ function exportBoardPNG(){
     const topY = P;
 
     setFont(22,true); ctx.fillStyle = COLORS.text; ctx.textAlign = 'center';
-    ctx.fillText('主日下午LIC聚会邀请', baseW/2, topY + 24);
+    ctx.fillText(activeListKey === 'fall2026' ? '2026 Fall 开学季' : '主日下午LIC聚会邀请', baseW/2, topY + 24);
 
     // 上方四列
+    const exportLabels = activeListKey === 'fall2026' ? FALL_STATUS_LABEL : MAIN_STATUS_LABEL;
     const cols = [
-      {key:'pool',  title:'邀请', color:COLORS.pool},
-      {key:'yes',   title:'确定', color:COLORS.yes},
-      {key:'maybe', title:'待定', color:COLORS.maybe},
-      {key:'no',    title:'不来', color:COLORS.no}
+      {key:'pool',  title:exportLabels.pool, color:COLORS.pool},
+      {key:'yes',   title:exportLabels.yes, color:COLORS.yes},
+      {key:'maybe', title:exportLabels.maybe, color:COLORS.maybe},
+      {key:'no',    title:exportLabels.no, color:COLORS.no}
     ];
     const totalColsW  = 4*COL_W + 3*COL_GAP;
     const leftPad = (baseW - totalColsW) / 2;
@@ -1577,6 +1587,7 @@ function exportBoardPNG(){
     tab.addEventListener('click', ()=>{
       const view = tab.dataset.viewTarget || 'board';
       activeListKey = view === 'fall2026' ? 'fall2026' : 'main';
+      updateStatusHeadings();
       $('.workspace-layout').dataset.view = view;
       const titles = {
         board: ['跟进中心', '拖动姓名更新进度，点击详情查看个人备注。'],
