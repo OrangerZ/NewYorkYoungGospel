@@ -1476,6 +1476,8 @@ function exportBoardPNG(){
   async function syncToGoogleSheet(silent=false){
     const url = getGoogleScriptUrl();
     if(!url){ alert('请先点击“设置 Google 同步”，粘贴 Apps Script Web App URL。'); return; }
+    // 自动同步只允许由真实的本地编辑触发；单纯打开、停留或关闭页面绝不上传。
+    if(silent && !localChangesPending) return;
     setSyncStatus('正在同步…');
     try{
       const state = load();
@@ -1502,6 +1504,11 @@ function exportBoardPNG(){
         body: JSON.stringify({ action:'save', state })
       });
       const data = await res.json();
+      if(data && data.code === 'STALE_STATE'){
+        setSyncStatus('云端已有更新，请刷新');
+        if(!silent) alert('云端名单已被其他人更新。为避免覆盖对方的数据，本次保存已停止。请刷新网页后再编辑。');
+        return;
+      }
       if(!data || !data.ok) throw new Error((data && data.error) || '同步失败');
       // 云端会合并其他设备刚保存的人员。当前同步期间若本机没有新改动，
       // 立即采用合并后的版本，避免下一次操作仍基于旧名单。
