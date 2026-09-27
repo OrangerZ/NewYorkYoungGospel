@@ -398,7 +398,7 @@
   <section class="control-panel" aria-label="名单工具">
     <p class="tool-label">添加</p>
     <div class="add-group">
-      <input id="newName" type="text" placeholder="输入姓名…">
+      <input id="newName" type="text" placeholder="添加到哥大校园…">
       <button id="addBtn">添加</button>
     </div>
     <button id="toggleBulkBtn" class="wide-btn">＋ 批量添加</button>
@@ -410,7 +410,7 @@
       </div>
       <textarea id="bulkInput" placeholder="张三&#10;李四&#10;王五"></textarea>
       <div class="bulk-actions">
-        <button id="bulkAddBtn">添加到邀请</button>
+        <button id="bulkAddBtn">添加到遇到的</button>
         <label class="small"><input id="allowDup" type="checkbox"> 允许重名</label>
       </div>
     </div>
@@ -426,7 +426,6 @@
     <div class="side-section">
       <p class="tool-label">文件与分享</p>
       <div class="utility-grid">
-        <button id="pngBtn">导出图片</button>
         <button id="exportBtn">导出数据</button>
         <input id="importFile" type="file" accept=".json" style="display:none">
         <button id="importBtn">导入数据</button>
@@ -440,14 +439,14 @@
   <div class="workspace-heading">
     <div>
       <p class="eyebrow dark">People Care Board</p>
-      <h2 id="workspaceTitle">跟进中心</h2>
-      <p id="workspaceDescription">拖动姓名更新进度，点击详情查看个人备注。</p>
+      <h2 id="workspaceTitle">哥大校园</h2>
+      <p id="workspaceDescription">独立的哥大校园福音名单。</p>
     </div>
   </div>
 
   <nav class="view-tabs" aria-label="工作区视图">
-    <button type="button" class="view-tab active" data-view-target="board">List</button>
-    <button type="button" class="view-tab" data-view-target="fall2026">2026 Fall 开学季</button>
+    <button type="button" class="view-tab active" data-view-target="fall2026">哥大校园</button>
+    <button type="button" class="view-tab" data-view-target="board">Long Island City</button>
     <button type="button" class="view-tab" data-view-target="nyuBrooklyn">NYU- Brooklyn</button>
     <button type="button" class="view-tab" data-view-target="categories">Group</button>
     <button type="button" class="view-tab" data-view-target="notice">Notice</button>
@@ -457,19 +456,19 @@
     <section class="board-area" aria-label="邀请进度">
       <div class="columns">
         <section class="col" data-status="pool">
-          <h3><span>邀请</span><span class="count" id="count-pool">0</span></h3>
+          <h3><span>遇到的</span><span class="count" id="count-pool">0</span></h3>
           <div class="list" id="list-pool"></div>
         </section>
         <section class="col" data-status="yes">
-          <h3><span>确定</span><span class="count" id="count-yes">0</span></h3>
+          <h3><span>积极回复</span><span class="count" id="count-yes">0</span></h3>
           <div class="list" id="list-yes"></div>
         </section>
         <section class="col" data-status="maybe">
-          <h3><span>待定</span><span class="count" id="count-maybe">0</span></h3>
+          <h3><span>很少回复</span><span class="count" id="count-maybe">0</span></h3>
           <div class="list" id="list-maybe"></div>
         </section>
         <section class="col" data-status="no">
-          <h3><span>不来</span><span class="count" id="count-no">0</span></h3>
+          <h3><span>几乎不回</span><span class="count" id="count-no">0</span></h3>
           <div class="list" id="list-no"></div>
         </section>
       </div>
@@ -530,9 +529,9 @@
   const storeKey = 'invite_manager_v2';
   const cloudBaseKey = 'invite_manager_cloud_base_v1';
 
-  const MAIN_STATUS_LABEL = { pool:"邀请", yes:"确定", maybe:"待定", no:"不来" };
+  const MAIN_STATUS_LABEL = { pool:"遇到的", yes:"积极回复", maybe:"很少回复", no:"几乎不回" };
   const FALL_STATUS_LABEL = { pool:"遇到的", yes:"积极回复", maybe:"很少回复", no:"几乎不回" };
-  let activeListKey = 'main';
+  let activeListKey = 'fall2026';
 
   function updateStatusHeadings(){
     const labels = activeListKey === 'main' ? MAIN_STATUS_LABEL : FALL_STATUS_LABEL;
@@ -1177,272 +1176,6 @@ function enableItemActions(){
     })[s]);
   }
 
-  // —— PNG 导出（含下方分类区）
-function exportBoardPNG(){
-  try{
-    // ===== 基本配置（导出更清晰）=====
-    const scale   = 2;
-    const baseW   = 700;    // 画布逻辑宽度
-    const COL_W   = 160;    // 上方单列宽
-    const COL_GAP = 12;
-    const P       = 24;     // 外边距
-    const HEADER_H= 52;     // 顶部标题/日期区
-    const ROW_H   = 28;     // 上方姓名卡片高度
-    const ROW_GAP = 6;
-    const FOOTER_H= 24;
-
-    // —— 分类区尺寸
-    const SECTION_GAP = 16; // 四列与分类区之间的间距
-    const BOX_GAP     = 12; // 两个分类框之间的水平间距
-    const BOX_PAD     = 10; // 分类框内边距
-    const TAG_H       = 20; // 分类区姓名标签高度
-    const TAG_GAP     = 6;  // 标签之间的间距
-    const TAG_PAD_X   = 10; // 标签左右内边距
-    const TITLE_H     = 22; // 每个分类框标题高度
-    const SECTION_TITLE_H = 20; // “下方分类”标题高度
-
-    // ===== 取当前页面数据 =====
-    const state   = load();
-    const activeData = getListData(state);
-    let people  = activeData.people || [];
-    let statuses= activeData.statuses || {};
-
-    // 上方四列分桶
-    const buckets = { pool:[], yes:[], maybe:[], no:[] };
-    people.forEach(p=>{
-      const st = statuses[p.id] || 'pool';
-      (buckets[st]||buckets.pool).push(p.name || '');
-    });
-
-    // —— 下方分类的数据（用当前页面的分类与顺序）
-    const id2name = {}; (people||[]).forEach(p=> id2name[p.id] = p.name || '');
-    const bottomTypes = state.bottomTypes || {};
-    const bottomOrder = state.bottomOrder || {member:[], baptism:[], friend:[]};
-
-    function collectBottom(cat){
-      const ordered = (bottomOrder[cat]||[]).filter(id=>id2name[id]).map(id=>id2name[id]);
-      // 把顺序里没有但类型属于该类的也补上
-      const extra = [];
-      Object.keys(bottomTypes).forEach(id=>{
-        if(bottomTypes[id] === cat && id2name[id] && !ordered.includes(id2name[id])){
-          extra.push(id2name[id]);
-        }
-      });
-      return ordered.concat(extra);
-    }
-    const members = collectBottom('member');
-    const baptisms = collectBottom('baptism');
-    const friends = collectBottom('friend');
-
-    // ===== 先预计算高度（需要测量文本宽度）=====
-    // 用一个临时 ctx 来测量标签宽度，决定行数/高度
-    const tempCanvas = document.createElement('canvas');
-    const tctx = tempCanvas.getContext('2d');
-    function setMeasureFont(px,bold=false){
-      tctx.font = `${bold?'600 ':''}${px}px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"PingFang SC","Microsoft YaHei"`;
-    }
-    setMeasureFont(12,false);
-
-    const colsMaxRows = Math.max(
-      buckets.pool.length, buckets.yes.length, buckets.maybe.length, buckets.no.length, 1
-    );
-    const BODY_H  = 40 + (ROW_H + ROW_GAP) * colsMaxRows; // 上方四列高度（卡片区）
-    const topPartH = P + HEADER_H + BODY_H;               // 上方总高（不含页脚）
-
-    // 分类框宽度（三列）
-    const totalW  = baseW - P*2;
-    const boxW    = (totalW - BOX_GAP*2) / 3;
-
-    function measureBoxHeight(names){
-      let x = 0, rows = 0;
-      names.forEach(n=>{
-        const text = String(n||'').trim();
-        const w = Math.ceil(tctx.measureText(text).width) + TAG_PAD_X*2;
-        if(x === 0){ // 行首
-          x = w; rows = 1;
-        }else{
-          if(x + TAG_GAP + w <= boxW - BOX_PAD*2){
-            x += TAG_GAP + w;
-          }else{
-            rows += 1; x = w;
-          }
-        }
-      });
-      if(rows === 0) rows = 1; // 最少一行
-      // 盒子高度 = 顶部标题 + 间距 + rows 行标签 + 内边距
-      return BOX_PAD + TITLE_H + 6 + rows*TAG_H + (rows-1)*TAG_GAP + BOX_PAD;
-    }
-    const memberBoxH = measureBoxHeight(members);
-    const baptismBoxH = measureBoxHeight(baptisms);
-    const friendBoxH = measureBoxHeight(friends);
-    const bottomBoxesH = Math.max(memberBoxH, baptismBoxH, friendBoxH);
-    const bottomSectionH = SECTION_GAP + SECTION_TITLE_H + 8 + bottomBoxesH; // 包含“下方分类”标题
-
-    // 总高度
-    const Hbase = topPartH + bottomSectionH + FOOTER_H + P;
-
-    // ===== 正式画布 =====
-    const W = baseW * scale, H = Hbase * scale;
-    const canvas = document.createElement('canvas');
-    canvas.width = W; canvas.height = H;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(scale, scale);
-
-    // 颜色
-    const COLORS = {
-      bg:'#f7f7f8', card:'#fff', text:'#111', line:'#e6e6e6',
-      pool:'#6aa5ff', yes:'#35c28d', maybe:'#f2c94c', no:'#ef5b6b'
-    };
-
-    function setFont(px,bold=false){
-      ctx.font = `${bold?'600 ':''}${px}px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"PingFang SC","Microsoft YaHei"`;
-    }
-    function roundRectPath(ctx, x, y, w, h, r){
-      const rr = Math.max(0, Math.min(r || 8, w/2, h/2));
-      ctx.beginPath();
-      ctx.moveTo(x + rr, y);
-      ctx.lineTo(x + w - rr, y);
-      ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
-      ctx.lineTo(x + w, y + h - rr);
-      ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
-      ctx.lineTo(x + rr, y + h);
-      ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
-      ctx.lineTo(x, y + rr);
-      ctx.quadraticCurveTo(x, y, x + rr, y);
-      ctx.closePath();
-    }
-    function fitText(t,maxW){
-      let s = String(t || '');
-      while (ctx.measureText(s).width > maxW) {
-        if (s.length <= 1) break;
-        s = s.slice(0,-1);
-      }
-      return s !== t ? s + '…' : s;
-    }
-
-    // 背景
-    ctx.fillStyle = COLORS.bg; ctx.fillRect(0,0,baseW,Hbase);
-
-    // 顶部标题
-    const topY = P;
-
-    setFont(22,true); ctx.fillStyle = COLORS.text; ctx.textAlign = 'center';
-    const exportTitle = activeListKey === 'fall2026' ? '2026 Fall 开学季' : (activeListKey === 'nyuBrooklyn' ? 'NYU- Brooklyn' : '主日下午LIC聚会邀请');
-    ctx.fillText(exportTitle, baseW/2, topY + 24);
-
-    // 上方四列
-    const exportLabels = activeListKey === 'main' ? MAIN_STATUS_LABEL : FALL_STATUS_LABEL;
-    const cols = [
-      {key:'pool',  title:exportLabels.pool, color:COLORS.pool},
-      {key:'yes',   title:exportLabels.yes, color:COLORS.yes},
-      {key:'maybe', title:exportLabels.maybe, color:COLORS.maybe},
-      {key:'no',    title:exportLabels.no, color:COLORS.no}
-    ];
-    const totalColsW  = 4*COL_W + 3*COL_GAP;
-    const leftPad = (baseW - totalColsW) / 2;
-    const colsTop = topY + HEADER_H;
-
-    cols.forEach((c,idx)=>{
-      const x = leftPad + idx*(COL_W + COL_GAP);
-      const y = colsTop;
-
-      ctx.fillStyle = COLORS.card; roundRectPath(ctx, x, y, COL_W, BODY_H, 10); ctx.fill();
-      ctx.strokeStyle = COLORS.line; ctx.lineWidth = 1; roundRectPath(ctx, x, y, COL_W, BODY_H, 10); ctx.stroke();
-
-      setFont(14,true); ctx.fillStyle = COLORS.text;
-      ctx.fillText(c.title, x + 10, y + 22);
-      ctx.fillStyle = c.color; ctx.beginPath(); ctx.arc(x + COL_W - 14, y + 16, 5, 0, Math.PI*2); ctx.fill();
-
-      setFont(12,false);
-      let cy = y + 36;
-      (buckets[c.key] || []).forEach(nm=>{
-        const iw = COL_W - 20, ih = ROW_H;
-        ctx.fillStyle = '#fafafa'; roundRectPath(ctx, x+10, cy, iw, ih, 6); ctx.fill();
-        ctx.strokeStyle = COLORS.line; ctx.lineWidth = 1; roundRectPath(ctx, x+10, cy, iw, ih, 6); ctx.stroke();
-        ctx.fillStyle = c.color; roundRectPath(ctx, x+10, cy, 5, ih, 6); ctx.fill();
-        ctx.fillStyle = '#222'; ctx.fillText(fitText(nm, iw - 20), x + 24, cy + ih/2 + 4);
-        cy += ih + ROW_GAP;
-      });
-    });
-
-    // ===== 下方分类标题 =====
-    const sectionTop = colsTop + BODY_H + SECTION_GAP;
-    setFont(14,true); ctx.fillStyle = COLORS.text;
-    ctx.fillText('下方分类', P, sectionTop + SECTION_TITLE_H);
-
-    // ===== 两个分类框（等高）=====
-    const boxesTop = sectionTop + SECTION_TITLE_H + 8;
-    const boxX1 = P, boxX2 = P + boxW + BOX_GAP, boxX3 = P + (boxW + BOX_GAP)*2;
-
-    // 画一个分类框的函数
-    function drawBox(x, y, w, h, title, color, names){
-      // 外框
-      ctx.fillStyle = COLORS.card; roundRectPath(ctx, x, y, w, h, 10); ctx.fill();
-      ctx.strokeStyle = COLORS.line; ctx.lineWidth = 1; roundRectPath(ctx, x, y, w, h, 10); ctx.stroke();
-
-      // 标题 + 彩点 + 计数
-      setFont(13,true); ctx.fillStyle = COLORS.text;
-      ctx.fillText(title, x + BOX_PAD, y + BOX_PAD + 14);
-      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x + BOX_PAD + 58, y + BOX_PAD + 10, 4, 0, Math.PI*2); ctx.fill();
-      setFont(12,false); ctx.fillStyle = '#666';
-      ctx.fillText(`(${names.length})`, x + BOX_PAD + 68, y + BOX_PAD + 14);
-
-      // 标签区域
-      let cx = x + BOX_PAD, cy = y + BOX_PAD + TITLE_H + 6;
-      setFont(12,false);
-      names.forEach(nm=>{
-        const text = String(nm||'').trim();
-        const tw = Math.ceil(ctx.measureText(text).width);
-        const ww = tw + TAG_PAD_X*2;
-        const avail = x + w - BOX_PAD;
-        if(cx + ww > avail){
-          cx = x + BOX_PAD;
-          cy += TAG_H + TAG_GAP;
-        }
-        // 背景圆角
-        ctx.fillStyle = '#f5f7fb';
-        roundRectPath(ctx, cx, cy, ww, TAG_H, 999);
-        ctx.fill();
-        ctx.strokeStyle = COLORS.line; ctx.lineWidth = 1;
-        roundRectPath(ctx, cx, cy, ww, TAG_H, 999);
-        ctx.stroke();
-        // 文本
-        ctx.fillStyle = '#222';
-        ctx.fillText(text, cx + TAG_PAD_X, cy + TAG_H/2 + 4);
-        cx += ww + TAG_GAP;
-      });
-    }
-
-    drawBox(boxX1, boxesTop, boxW, bottomBoxesH, '弟兄姊妹', '#35c28d', members);
-    drawBox(boxX2, boxesTop, boxW, bottomBoxesH, '预备受浸', '#7189b8', baptisms);
-    drawBox(boxX3, boxesTop, boxW, bottomBoxesH, '福音朋友', '#d2a84b', friends);
-
-    // 页脚
-    setFont(11,false); ctx.fillStyle = '#888';
-    ctx.fillText('Generated by InviteManager', P, Hbase - P);
-
-    // 下载
-    if (canvas.toBlob) {
-      canvas.toBlob(blob=>{
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'InviteBoard_' + new Date().toISOString().slice(0,10) + '.png';
-        a.click(); URL.revokeObjectURL(url);
-      }, 'image/png');
-    } else {
-      const a = document.createElement('a');
-      a.href = canvas.toDataURL('image/png');
-      a.download = 'InviteBoard_' + new Date().toISOString().slice(0,10) + '.png';
-      a.click();
-    }
-  }catch(e){
-    console.error(e);
-    alert('导出失败：' + e.message);
-  }
-}
-  window.exportBoardPNG = exportBoardPNG;
-
   // —— JSON 备份/恢复 & 下载本页
   function exportJSON(){
     const state = load();
@@ -1642,7 +1375,6 @@ function exportBoardPNG(){
   $('#exportBtn').addEventListener('click', exportJSON);
   $('#importBtn').addEventListener('click', ()=> $('#importFile').click());
   $('#importFile').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) importJSON(f); e.target.value=''; });
-  document.getElementById('pngBtn')?.addEventListener('click', exportBoardPNG);
   document.getElementById('googleSetupBtn')?.addEventListener('click', setupGoogleSync);
   document.getElementById('googleSaveBtn')?.addEventListener('click', ()=>syncToGoogleSheet(false));
   document.getElementById('googleLoadBtn')?.addEventListener('click', ()=>loadFromGoogleSheet(false));
@@ -1653,15 +1385,15 @@ function exportBoardPNG(){
       updateStatusHeadings();
       $('.workspace-layout').dataset.view = view;
       const titles = {
-        board: ['跟进中心', '拖动姓名更新进度，点击详情查看个人备注。'],
+        board: ['Long Island City', '拖动姓名更新进度，点击详情查看个人备注。'],
         categories: ['分组整理', '在弟兄姊妹、预备受浸与福音朋友之间拖动姓名。'],
-        fall2026: ['2026 Fall 开学季', '独立的开学季福音名单，初始为空。'],
+        fall2026: ['哥大校园', '独立的哥大校园福音名单。'],
         nyuBrooklyn: ['NYU- Brooklyn', '独立的 NYU Brooklyn 福音名单，初始为空。'],
         notice: ['Notice', '发布聚会安排、代祷和服事提醒。']
       };
       $('#workspaceTitle').textContent = titles[view][0];
       $('#workspaceDescription').textContent = titles[view][1];
-      $('#newName').placeholder = view === 'fall2026' ? '添加到开学季…' : (view === 'nyuBrooklyn' ? '添加到 NYU- Brooklyn…' : '输入姓名…');
+      $('#newName').placeholder = view === 'fall2026' ? '添加到哥大校园…' : (view === 'nyuBrooklyn' ? '添加到 NYU- Brooklyn…' : '添加到 Long Island City…');
       $$('.view-tab').forEach(btn=>{
         const active = btn === tab;
         btn.classList.toggle('active', active);
