@@ -54,8 +54,10 @@
   .count{ min-width:27px; padding:3px 8px; border-radius:999px; color:#596174; background:#efede7; font-size:11px; font-weight:700; text-align:center; }
   .list{ flex:1; padding:11px; display:grid; grid-auto-rows:min-content; gap:8px; }
   .item{ position:relative; min-width:0; padding:10px 9px 10px 13px; display:flex; justify-content:space-between; align-items:center; gap:8px; overflow:hidden; border:1px solid #e5e1d8; border-radius:11px; background:#fff; cursor:grab; user-select:none; box-shadow:0 2px 6px rgba(20,35,61,.035); transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease; }
-  .item::before{ content:""; position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:0 4px 4px 0; }
-  #list-pool .item::before{background:var(--pool)} #list-yes .item::before{background:var(--yes)} #list-maybe .item::before{background:var(--maybe)} #list-no .item::before{background:var(--no)}
+  .item.gender-male,.item.gender-female{ border-color:#e5e1d8; background:#fff; }
+  .item::before{ content:""; position:absolute; left:0; top:7px; bottom:7px; width:5px; border-radius:0 5px 5px 0; background:#c9cdd4; }
+  .list .item.gender-male::before{ background:#287fc9; }
+  .list .item.gender-female::before{ background:#dc5687; }
   .item:hover{ transform:translateY(-1px); border-color:#ccc3b4; box-shadow:0 7px 16px rgba(20,35,61,.08); }
   .item.dragging,.btag.dragging{ opacity:.55; transform:scale(.98); }
   .item .name{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; font-weight:650; }
@@ -77,6 +79,8 @@
   .bcount{ color:var(--muted); font-size:11px; }
   .blist{ min-height:48px; display:flex; flex-wrap:wrap; align-content:flex-start; gap:7px; }
   .btag{ padding:7px 10px; border:1px solid #ded9ce; border-radius:999px; background:#fff; cursor:grab; user-select:none; font-size:12px; line-height:1; }
+  .btag.gender-male{ color:#185f9c !important; border-color:#287fc9 !important; background:#fff !important; box-shadow:inset 5px 0 #287fc9; }
+  .btag.gender-female{ color:#a82e5b !important; border-color:#dc5687 !important; background:#fff !important; box-shadow:inset 5px 0 #dc5687; }
   .bcol[data-bcat="member"] .btag{ color:#246a56; border-color:#cae2da; background:#f0f8f5; }.bcol[data-bcat="baptism"] .btag{ color:#425b8b; border-color:#d2daeb; background:#f2f5fb; }.bcol[data-bcat="friend"] .btag{ color:#7c5b20; border-color:#ead9b8; background:#fff8e9; }
   .panel-note{ margin:12px 1px 0; color:var(--muted); font-size:11px; }
   .note-dialog{ width:min(470px,calc(100% - 28px)); padding:0; overflow:hidden; border:1px solid #dfd8cb; border-radius:18px; color:var(--ink); background:var(--paper); box-shadow:0 28px 80px rgba(15,27,45,.28); }
@@ -89,6 +93,11 @@
   #personNoteInput{ min-height:150px; resize:vertical; }
   #personNameInput:focus,#personNoteInput:focus{ border-color:#7893b8; box-shadow:0 0 0 3px rgba(79,126,217,.11); }
   #personNameInput[readonly],#personNoteInput[readonly]{ background:#f3f1eb; cursor:default; }
+  .gender-field{ margin-top:12px; }
+  .gender-field>span{ display:block; margin-bottom:7px; color:#4e5869; font-size:12px; font-weight:700; }
+  .gender-options{ display:flex; gap:20px; align-items:center; }
+  .gender-option{ display:inline-flex; align-items:center; gap:6px; margin:0; color:#384152; font-size:13px; font-weight:500; cursor:pointer; }
+  .gender-option input{ width:16px; height:16px; margin:0; accent-color:#3c6f9f; }
   .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:17px; }
   .dialog-actions button{ padding:8px 14px; border:1px solid var(--line); border-radius:9px; background:#fff; cursor:pointer; font-size:12px; font-weight:650; }
   .dialog-actions .primary{ color:#fff; border-color:var(--navy); background:var(--navy); }.dialog-actions .danger{ margin-right:auto; color:#b63f4a; border-color:#ebc8cb; }.dialog-actions .danger:hover{ background:#fff1f2; }
@@ -224,7 +233,8 @@
   .note-dialog.view-mode h2{ padding-bottom:12px; border-bottom:1px solid #e6dfd2; font-family:Georgia,"Songti SC",serif; font-size:22px; }
   .note-dialog.view-mode .dialog-hint{ color:#9a8661; letter-spacing:.08em; }
   .note-dialog.view-mode label[for="personNameInput"],
-  .note-dialog.view-mode #personNameInput{ display:none; }
+  .note-dialog.view-mode #personNameInput,
+  .note-dialog.view-mode .gender-field{ display:none; }
   .note-dialog.view-mode label[for="personNoteInput"]{ margin-top:17px; color:#9a8661; font-size:10px; letter-spacing:.12em; }
   .note-dialog.view-mode #personNoteInput{ min-height:250px; padding:4px 0; border:0; color:#384152; background:transparent; box-shadow:none; resize:none; font-family:Georgia,"Songti SC",serif; font-size:14px; line-height:1.9; }
   .note-dialog.view-mode .dialog-actions{ margin-top:7px; padding-top:14px; border-top:1px solid #e6dfd2; }
@@ -513,6 +523,13 @@
     <p id="personNoteHint" class="dialog-hint">查看详细信息。</p>
     <label for="personNameInput">姓名</label>
     <input id="personNameInput" type="text">
+    <div class="gender-field" role="group" aria-labelledby="personGenderLabel">
+      <span id="personGenderLabel">性别</span>
+      <div class="gender-options">
+        <label class="gender-option"><input type="radio" name="personGender" value="male"> 男</label>
+        <label class="gender-option"><input type="radio" name="personGender" value="female"> 女</label>
+      </div>
+    </div>
     <label for="personNoteInput">备注</label>
     <textarea id="personNoteInput" placeholder="记录联系方式、邀请进度或其他信息…"></textarea>
     <div class="dialog-actions">
@@ -664,6 +681,8 @@
   let autoSyncTimer = null;
   let localChangesPending = false;
   let localRevision = 0;
+  let syncInFlight = false;
+  let syncRetryDelay = 2000;
 
   function save(state){
     localStorage.setItem(storeKey, JSON.stringify(state));
@@ -765,7 +784,8 @@
         const cur = data.statuses[p.id] || 'pool';
         if(cur !== st) return;
         const el = document.createElement('div');
-        el.className = 'item'; el.draggable = true; el.dataset.id = p.id;
+        el.className = 'item' + (p.gender === 'male' ? ' gender-male' : (p.gender === 'female' ? ' gender-female' : ''));
+        el.draggable = true; el.dataset.id = p.id;
         el.innerHTML = `
           <span class="name">${escapeHTML(p.name)}</span>
           <span class="actions">
@@ -895,7 +915,7 @@
       const p = id2p[id]; if(!p || renderedIds.has(id)) return;
       renderedIds.add(id);
       const tag = document.createElement('div');
-      tag.className = 'btag'; tag.draggable = true; tag.dataset.id = id;
+      tag.className = 'btag' + (p.gender === 'male' ? ' gender-male' : (p.gender === 'female' ? ' gender-female' : '')); tag.draggable = true; tag.dataset.id = id;
       tag.textContent = p.name || '';
       memberList.appendChild(tag); memberCnt++;
     });
@@ -903,7 +923,7 @@
       const p = id2p[id]; if(!p || renderedIds.has(id)) return;
       renderedIds.add(id);
       const tag = document.createElement('div');
-      tag.className = 'btag'; tag.draggable = true; tag.dataset.id = id;
+      tag.className = 'btag' + (p.gender === 'male' ? ' gender-male' : (p.gender === 'female' ? ' gender-female' : '')); tag.draggable = true; tag.dataset.id = id;
       tag.textContent = p.name || '';
       baptismList.appendChild(tag); baptismCnt++;
     });
@@ -911,7 +931,7 @@
       const p = id2p[id]; if(!p || renderedIds.has(id)) return;
       renderedIds.add(id);
       const tag = document.createElement('div');
-      tag.className = 'btag'; tag.draggable = true; tag.dataset.id = id;
+      tag.className = 'btag' + (p.gender === 'male' ? ' gender-male' : (p.gender === 'female' ? ' gender-female' : '')); tag.draggable = true; tag.dataset.id = id;
       tag.textContent = p.name || '';
       friendList.appendChild(tag); friendCnt++;
     });
@@ -1155,6 +1175,10 @@ function enableItemActions(){
     $('#personNoteTitle').textContent = readOnly ? (person.name || '详情') : '编辑资料';
     $('#personNoteHint').textContent = readOnly ? '个人详情' : '修改姓名与备注';
     $('#personNameInput').value = person.name || '';
+    $$('input[name="personGender"]').forEach(input=>{
+      input.checked = input.value === person.gender;
+      input.disabled = readOnly;
+    });
     $('#personNoteInput').value = (data.personNotes && data.personNotes[id]) || '';
     $('#personNoteInput').placeholder = readOnly ? '暂无备注' : '记录联系方式、邀请进度或其他信息…';
     $('#personNameInput').readOnly = readOnly;
@@ -1236,11 +1260,21 @@ function enableItemActions(){
     autoSyncTimer = setTimeout(()=>syncToGoogleSheet(true), 700);
   }
 
+  function scheduleSyncRetry(){
+    clearTimeout(autoSyncTimer);
+    const delay = syncRetryDelay;
+    setSyncStatus('上传失败，' + Math.ceil(delay / 1000) + ' 秒后自动重试…');
+    autoSyncTimer = setTimeout(()=>syncToGoogleSheet(true), delay);
+    syncRetryDelay = Math.min(syncRetryDelay * 2, 60000);
+  }
+
   async function syncToGoogleSheet(silent=false){
     const url = getGoogleScriptUrl();
     if(!url){ alert('请先点击“设置 Google 同步”，粘贴 Apps Script Web App URL。'); return; }
     // 自动同步只允许由真实的本地编辑触发；单纯打开、停留或关闭页面绝不上传。
     if(silent && !localChangesPending) return;
+    if(syncInFlight) return;
+    syncInFlight = true;
     setSyncStatus('正在同步…');
     try{
       const state = load();
@@ -1268,11 +1302,16 @@ function enableItemActions(){
       // 同步过程只更新本地缓存，不再调用 save()，避免触发下一轮自动同步。
       localStorage.setItem(storeKey, JSON.stringify(state));
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(()=>controller.abort(), 45000);
       const res = await fetch(url, {
         method:'POST',
         headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({ action:'save', state, baseState })
+        body: JSON.stringify({ action:'save', state, baseState }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+      if(!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       if(data && data.code === 'STALE_STATE'){
         setSyncStatus('云端已有更新，请刷新');
@@ -1280,6 +1319,7 @@ function enableItemActions(){
         return;
       }
       if(!data || !data.ok) throw new Error((data && data.error) || '同步失败');
+      syncRetryDelay = 2000;
       if(data.state) saveCloudBase(data.state);
       // 云端会合并其他设备刚保存的人员。当前同步期间若本机没有新改动，
       // 立即采用合并后的版本，避免下一次操作仍基于旧名单。
@@ -1303,8 +1343,12 @@ function enableItemActions(){
       if(!silent) alert('已同步到 Google Sheet');
     }catch(err){
       console.error(err);
-      setSyncStatus('同步失败');
-      if(!silent) alert('同步失败：' + err.message + '\n\n请确认 Apps Script 已部署为 Web App，并允许访问。');
+      const message = err.name === 'AbortError' ? '请求超时' : err.message;
+      setSyncStatus('同步失败：' + message);
+      if(localChangesPending && autoSyncEnabled) scheduleSyncRetry();
+      if(!silent) alert('同步失败：' + message + '\n\n系统会自动重试；请确认 Apps Script 已部署为 Web App，并允许访问。');
+    }finally{
+      syncInFlight = false;
     }
   }
 
@@ -1438,6 +1482,11 @@ function enableItemActions(){
     const person = (data.people||[]).find(p=>p.id === editingPersonNoteId);
     const name = normalizedName($('#personNameInput').value);
     if(person && name) person.name = name;
+    const selectedGender = document.querySelector('input[name="personGender"]:checked');
+    if(person){
+      if(selectedGender) person.gender = selectedGender.value;
+      else delete person.gender;
+    }
     data.personNotes = data.personNotes || {};
     const note = $('#personNoteInput').value.trim();
     if(note) data.personNotes[editingPersonNoteId] = note;
