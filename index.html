@@ -458,6 +458,7 @@
     <button type="button" class="view-tab active" data-view-target="fall2026">哥大校园</button>
     <button type="button" class="view-tab" data-view-target="board">Long Island City</button>
     <button type="button" class="view-tab" data-view-target="nyuBrooklyn">NYU- Brooklyn</button>
+    <button type="button" class="view-tab" data-view-target="flushing">Flushing</button>
     <button type="button" class="view-tab" data-view-target="categories">Group</button>
     <button type="button" class="view-tab" data-view-target="notice">Notice</button>
   </nav>
@@ -577,7 +578,8 @@
     if(!state.bottomTypes) state.bottomTypes = {};
     const fallPeople = state.campaigns?.fall2026?.people || [];
     const nyuPeople = state.campaigns?.nyuBrooklyn?.people || [];
-    const allPeople = (state.people||[]).concat(fallPeople, nyuPeople);
+    const flushingPeople = state.campaigns?.flushing?.people || [];
+    const allPeople = (state.people||[]).concat(fallPeople, nyuPeople, flushingPeople);
     const valid = new Set(allPeople.map(p=>p.id));
     Object.keys(state.bottomTypes).forEach(id=>{ if(!valid.has(id)) delete state.bottomTypes[id]; });
     allPeople.forEach(p=>{ if(!state.bottomTypes[p.id]) state.bottomTypes[p.id] = 'friend'; });
@@ -593,8 +595,8 @@
         bottomTypes: {},
         bottomOrder: { member:[], baptism:[], friend:[] },
         personNotes: {}, // personId -> note 文本
-        deletedPeople: { main:[], fall2026:[], nyuBrooklyn:[] },
-        campaigns: { fall2026: emptyListData(), nyuBrooklyn: emptyListData() },
+        deletedPeople: { main:[], fall2026:[], nyuBrooklyn:[], flushing:[] },
+        campaigns: { fall2026: emptyListData(), nyuBrooklyn: emptyListData(), flushing: emptyListData() },
         notices: []
       };
       localStorage.setItem(storeKey, JSON.stringify(init));
@@ -609,13 +611,15 @@
     if(!state.bottomTypes)  state.bottomTypes  = {};
     if(!state.bottomOrder)  state.bottomOrder  = { member:[], baptism:[], friend:[] };
     if(!state.personNotes) state.personNotes = {};
-    if(!state.deletedPeople) state.deletedPeople = { main:[], fall2026:[], nyuBrooklyn:[] };
+    if(!state.deletedPeople) state.deletedPeople = { main:[], fall2026:[], nyuBrooklyn:[], flushing:[] };
     if(!Array.isArray(state.deletedPeople.main)) state.deletedPeople.main = [];
     if(!Array.isArray(state.deletedPeople.fall2026)) state.deletedPeople.fall2026 = [];
     if(!Array.isArray(state.deletedPeople.nyuBrooklyn)) state.deletedPeople.nyuBrooklyn = [];
+    if(!Array.isArray(state.deletedPeople.flushing)) state.deletedPeople.flushing = [];
     if(!state.campaigns) state.campaigns = {};
     if(!state.campaigns.fall2026) state.campaigns.fall2026 = emptyListData();
     if(!state.campaigns.nyuBrooklyn) state.campaigns.nyuBrooklyn = emptyListData();
+    if(!state.campaigns.flushing) state.campaigns.flushing = emptyListData();
     if(!Array.isArray(state.notices)) state.notices = [];
 
     const fall = state.campaigns.fall2026;
@@ -629,6 +633,13 @@
     if(!nyu.statuses) nyu.statuses = {};
     if(!nyu.order) nyu.order = { pool:[], yes:[], maybe:[], no:[] };
     if(!nyu.personNotes) nyu.personNotes = {};
+
+
+    const flushing = state.campaigns.flushing;
+    if(!flushing.people) flushing.people = [];
+    if(!flushing.statuses) flushing.statuses = {};
+    if(!flushing.order) flushing.order = { pool:[], yes:[], maybe:[], no:[] };
+    if(!flushing.personNotes) flushing.personNotes = {};
 
     ensureBottomTypes(state);
 
@@ -662,13 +673,23 @@
       nyuBySt[st].forEach(id=>{ if(!nyu.order[st].includes(id)) nyu.order[st].push(id); });
     });
 
+
+    // Flushing 四列顺序自修复（独立名单）
+    const flushingIds = new Set(flushing.people.map(p=>p.id));
+    const flushingBySt = { pool:[], yes:[], maybe:[], no:[] };
+    flushing.people.forEach(p=> flushingBySt[flushing.statuses[p.id] || 'pool'].push(p.id));
+    ['pool','yes','maybe','no'].forEach(st=>{
+      flushing.order[st] = (flushing.order[st]||[]).filter(id=>flushingIds.has(id) && flushingBySt[st].includes(id));
+      flushingBySt[st].forEach(id=>{ if(!flushing.order[st].includes(id)) flushing.order[st].push(id); });
+    });
+
     // Group 顺序自修复（主名单 + 开学季名单）
-    const bottomValidIds = new Set([...validIds, ...fallIds, ...nyuIds]);
+    const bottomValidIds = new Set([...validIds, ...fallIds, ...nyuIds, ...flushingIds]);
     ['member','baptism','friend'].forEach(k=>{
       state.bottomOrder[k] = [...new Set(state.bottomOrder[k]||[])]
         .filter(id=>bottomValidIds.has(id) && state.bottomTypes[id] === k);
     });
-    state.people.concat(fall.people, nyu.people).forEach(p=>{
+    state.people.concat(fall.people, nyu.people, flushing.people).forEach(p=>{
       const cat = state.bottomTypes[p.id] || 'friend';
       const arr = state.bottomOrder[cat];
       if(!arr.includes(p.id)) arr.push(p.id);
@@ -889,7 +910,8 @@
 
     const fallPeople = state.campaigns?.fall2026?.people || [];
     const nyuPeople = state.campaigns?.nyuBrooklyn?.people || [];
-    const allPeople = (state.people||[]).concat(fallPeople, nyuPeople);
+    const flushingPeople = state.campaigns?.flushing?.people || [];
+    const allPeople = (state.people||[]).concat(fallPeople, nyuPeople, flushingPeople);
     const fallIds = new Set(fallPeople.map(p=>p.id));
     const id2p = {}; allPeople.forEach(p=> id2p[p.id]=p);
 
@@ -1145,7 +1167,7 @@ function enableItemActions(){
   function deletePerson(id){
     const state = load();
     const data = getListData(state);
-    state.deletedPeople = state.deletedPeople || { main:[], fall2026:[], nyuBrooklyn:[] };
+    state.deletedPeople = state.deletedPeople || { main:[], fall2026:[], nyuBrooklyn:[], flushing:[] };
     const deletedKey = activeListKey;
     state.deletedPeople[deletedKey] = state.deletedPeople[deletedKey] || [];
     if(!state.deletedPeople[deletedKey].includes(id)) state.deletedPeople[deletedKey].push(id);
@@ -1298,6 +1320,12 @@ function enableItemActions(){
         note: nyuData.personNotes[person.id] || '',
         category: state.bottomTypes?.[person.id] || 'friend'
       }));
+      const flushingData = getListData(state, 'flushing');
+      flushingData.people = (flushingData.people||[]).map(person=>({
+        ...person,
+        note: flushingData.personNotes[person.id] || '',
+        category: state.bottomTypes?.[person.id] || 'friend'
+      }));
       // 同步过程只更新本地缓存，不再调用 save()，避免触发下一轮自动同步。
       localStorage.setItem(storeKey, JSON.stringify(state));
 
@@ -1384,6 +1412,12 @@ function enableItemActions(){
           nyuData.personNotes[person.id] = person.note;
         }
       });
+      const flushingData = getListData(state, 'flushing');
+      flushingData.people.forEach(person=>{
+        if(person && person.id && typeof person.note === 'string'){
+          flushingData.personNotes[person.id] = person.note;
+        }
+      });
       localStorage.setItem(storeKey, JSON.stringify(state));
       saveCloudBase(state);
       render();
@@ -1424,7 +1458,7 @@ function enableItemActions(){
   $$('.view-tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
       const view = tab.dataset.viewTarget || 'board';
-      activeListKey = view === 'fall2026' || view === 'nyuBrooklyn' ? view : 'main';
+      activeListKey = view === 'fall2026' || view === 'nyuBrooklyn' || view === 'flushing' ? view : 'main';
       updateStatusHeadings();
       $('.workspace-layout').dataset.view = view;
       const titles = {
@@ -1432,11 +1466,12 @@ function enableItemActions(){
         categories: ['分组整理', '在弟兄姊妹、预备受浸与福音朋友之间拖动姓名。'],
         fall2026: ['哥大校园', '独立的哥大校园福音名单。'],
         nyuBrooklyn: ['NYU- Brooklyn', '独立的 NYU Brooklyn 福音名单，初始为空。'],
+        flushing: ['Flushing', '独立的 Flushing 福音名单，初始为空。'],
         notice: ['Notice', '发布聚会安排、代祷和服事提醒。']
       };
       $('#workspaceTitle').textContent = titles[view][0];
       $('#workspaceDescription').textContent = titles[view][1];
-      $('#newName').placeholder = view === 'fall2026' ? '添加到哥大校园…' : (view === 'nyuBrooklyn' ? '添加到 NYU- Brooklyn…' : '添加到 Long Island City…');
+      $('#newName').placeholder = view === 'fall2026' ? '添加到哥大校园…' : (view === 'nyuBrooklyn' ? '添加到 NYU- Brooklyn…' : (view === 'flushing' ? '添加到 Flushing…' : '添加到 Long Island City…'));
       $$('.view-tab').forEach(btn=>{
         const active = btn === tab;
         btn.classList.toggle('active', active);
