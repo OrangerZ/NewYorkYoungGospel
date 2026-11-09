@@ -390,6 +390,24 @@
   .notice-actions button{ padding:3px 7px; border:1px solid #d5d1c8; border-radius:6px; color:#596577; background:#fff; cursor:pointer; font-size:10px; }
   .notice-empty{ padding:35px 10px; color:#969ba3; font-size:12px; text-align:center; }
   @media(max-width:760px){ .view-tabs{width:100%}.view-tab{flex:1}.bottom-panel .bottom-rows{grid-template-columns:1fr}.bottom-panel .bcol{min-height:180px}.bottom-panel .blist{min-height:110px} }
+  .view-tabs{flex-wrap:wrap;max-width:100%;box-sizing:border-box}
+  .servants-panel{display:none}
+  .workspace-layout[data-view="servants"] .board-area{display:none}
+  .workspace-layout[data-view="servants"] .servants-panel{display:block}
+  .add-group[hidden]{display:none}
+  .servant-compose{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .servant-columns{display:flex;flex-direction:column;gap:14px}
+  .servant-column{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;align-items:start;padding:16px;border:1px solid #d9d5cc;border-radius:12px;background:#fffdf8;min-width:0}
+  .servant-column h3{margin:0;padding:10px 0;overflow-wrap:anywhere}
+  .servant-members{display:flex;flex-wrap:wrap;gap:10px;min-width:0}
+  .servant-members > .muted{margin:10px 0}
+  .servant-person{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 12px;border:1px solid #e9edf0;border-radius:8px;background:#fff;min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere}
+  .servant-person.gender-male{border-color:#287fc9;box-shadow:inset 5px 0 #287fc9;color:#185f9c}
+  .servant-person.gender-female{border-color:#dc5687;box-shadow:inset 5px 0 #dc5687;color:#a82e5b}
+  .servant-person .chip{flex-shrink:0}
+  @media(max-width:600px){.servant-column{grid-template-columns:1fr;gap:6px}.servant-column h3{padding:0 0 6px}}
+  .servant-person small{display:block;color:#687184;margin-top:4px}
+  #personServantSelect{width:100%;padding:10px;border:1px solid #d4d8dd;border-radius:8px;margin:8px 0 16px;background:#fff;color:#17233b}
 </style>
 </head>
 <body>
@@ -460,6 +478,7 @@
     <button type="button" class="view-tab" data-view-target="nyuBrooklyn">NYU- Brooklyn</button>
     <button type="button" class="view-tab" data-view-target="flushing">Flushing</button>
     <button type="button" class="view-tab" data-view-target="categories">Group</button>
+    <button type="button" class="view-tab" data-view-target="servants">服事者</button>
     <button type="button" class="view-tab" data-view-target="notice">Notice</button>
   </nav>
 
@@ -507,6 +526,13 @@
       <p class="panel-note">新增默认进入「福音朋友」</p>
     </section>
 
+    <section class="servants-panel" aria-label="服事者">
+      <form id="servantForm" class="servant-compose">
+        <input id="servantName" aria-label="服事者姓名" placeholder="输入服事者名字…" required>
+        <button type="submit">添加服事者</button>
+      </form>
+      <div id="servantColumns" class="servant-columns"></div>
+    </section>
     <section class="notice-panel" aria-label="公告">
       <div class="notice-compose">
         <textarea id="noticeInput" rows="2" placeholder="写一条新公告…"></textarea>
@@ -530,9 +556,12 @@
         <label class="gender-option"><input type="radio" name="personGender" value="female"> 女</label>
       </div>
     </div>
+    <label for="personServantSelect">服事者</label>
+    <select id="personServantSelect" aria-label="服事者选择"></select>
     <label for="personNoteInput">备注</label>
     <textarea id="personNoteInput" placeholder="记录联系方式、邀请进度或其他信息…"></textarea>
     <div class="dialog-actions">
+      <button type="button" id="editPersonNoteBtn" class="primary">编辑资料</button>
       <button type="button" id="deletePersonBtn" class="danger">删除</button>
       <button type="button" id="cancelPersonNoteBtn">关闭</button>
       <button type="submit" id="savePersonNoteBtn" class="primary" value="save">保存</button>
@@ -597,6 +626,7 @@
         personNotes: {}, // personId -> note 文本
         deletedPeople: { main:[], fall2026:[], nyuBrooklyn:[], flushing:[] },
         campaigns: { fall2026: emptyListData(), nyuBrooklyn: emptyListData(), flushing: emptyListData() },
+        servants: [],
         notices: []
       };
       localStorage.setItem(storeKey, JSON.stringify(init));
@@ -604,6 +634,7 @@
     }
     let state; try{ state = JSON.parse(raw); }catch{ state = {}; }
 
+    if(!Array.isArray(state.servants)) state.servants = [];
     if(!state.people)   state.people   = [];
     if(!state.statuses) state.statuses = {};
     if(!state.history)  state.history  = [];
@@ -824,6 +855,7 @@
     renderCounts();
     renderBottomPanel();
     renderNotices();
+    renderServants();
 
   }
 
@@ -837,6 +869,72 @@
     $('#count-no').textContent = counts.no;
     $('#count-maybe').textContent = counts.maybe;
   }
+
+  function renderServants(){
+    const state = load();
+    const container = $('#servantColumns');
+    container.replaceChildren();
+    const sources = [['fall2026','哥大校园'],['main','Long Island City'],['nyuBrooklyn','NYU- Brooklyn'],['flushing','Flushing']];
+    const people = sources.flatMap(([key, label])=>getListData(state,key).people.map(person=>({person, label, key})));
+    if(!state.servants.length){
+      const empty = document.createElement('p');
+      empty.className = 'muted';
+      empty.textContent = '还没有服事者，请先添加服事者名字。';
+      container.appendChild(empty);
+    }
+    state.servants.forEach(servant=>{
+      const members = people.filter(({person})=>person.servantId === servant.id);
+      const column = document.createElement('section');
+      column.className = 'servant-column';
+      const heading = document.createElement('h3');
+      heading.textContent = `${servant.name}（${members.length}）`;
+      column.appendChild(heading);
+      const memberList = document.createElement('div');
+      memberList.className = 'servant-members';
+      column.appendChild(memberList);
+      members.forEach(({person,label,key})=>{
+        const row = document.createElement('div');
+        row.className = 'servant-person' + (person.gender === 'male' ? ' gender-male' : (person.gender === 'female' ? ' gender-female' : ''));
+        const name = document.createElement('span');
+        name.textContent = person.name;
+        const source = document.createElement('small');
+        source.textContent = label;
+        name.appendChild(source);
+        row.appendChild(name);
+        const details = document.createElement('button');
+        details.type = 'button';
+        details.className = 'chip';
+        details.textContent = '详情';
+        details.setAttribute('aria-label', `查看${person.name}的详情`);
+        details.addEventListener('click', ()=>openPersonNote(person.id, true, key));
+        row.appendChild(details);
+        memberList.appendChild(row);
+      });
+      if(!members.length){
+        const empty = document.createElement('p');
+        empty.className = 'muted';
+        empty.textContent = '暂无人员，请在人员编辑中选择服事者。';
+        memberList.appendChild(empty);
+      }
+      container.appendChild(column);
+    });
+  }
+
+  $('#servantForm').addEventListener('submit', e=>{
+    e.preventDefault();
+    const input = $('#servantName');
+    const name = normalizedName(input.value);
+    if(!name) return;
+    const state = load();
+    if(state.servants.some(servant=>servant.name.toLowerCase() === name.toLowerCase())){
+      alert('该服事者已存在');
+      return;
+    }
+    state.servants.push({id:'s_' + crypto.randomUUID(), name});
+    save(state);
+    input.value = '';
+    renderServants();
+  });
 
   function renderNotices(){
     const state = load();
@@ -878,6 +976,7 @@
         }
         save(latest);
         renderNotices();
+    renderServants();
       });
       meta.append(time, actions);
       item.append(text, meta);
@@ -895,6 +994,7 @@
     input.value = '';
     save(state);
     renderNotices();
+    renderServants();
   }
 
   // —— 下方分类（按 bottomOrder 渲染 + 兜底）
@@ -1163,12 +1263,13 @@ function enableItemActions(){
 
   // —— 点击姓名编辑个人备注
   let editingPersonNoteId = null;
+  let editingPersonListKey = null;
 
-  function deletePerson(id){
+  function deletePerson(id, listKey=activeListKey){
     const state = load();
-    const data = getListData(state);
+    const data = getListData(state, listKey);
     state.deletedPeople = state.deletedPeople || { main:[], fall2026:[], nyuBrooklyn:[], flushing:[] };
-    const deletedKey = activeListKey;
+    const deletedKey = listKey;
     state.deletedPeople[deletedKey] = state.deletedPeople[deletedKey] || [];
     if(!state.deletedPeople[deletedKey].includes(id)) state.deletedPeople[deletedKey].push(id);
     data.people = (data.people||[]).filter(p=>p.id !== id);
@@ -1184,17 +1285,23 @@ function enableItemActions(){
     save(state);
   }
 
-  function openPersonNote(id, readOnly=false){
+  function openPersonNote(id, readOnly=false, listKey=activeListKey){
     const state = load();
-    const data = getListData(state);
+    const data = getListData(state, listKey);
     const person = (data.people||[]).find(p=>p.id === id);
     if(!person) return;
     editingPersonNoteId = id;
+    editingPersonListKey = listKey;
     const dialog = $('#personNoteDialog');
     dialog.classList.toggle('view-mode', readOnly);
     dialog.classList.toggle('edit-mode', !readOnly);
     $('#personNoteTitle').textContent = readOnly ? (person.name || '详情') : '编辑资料';
-    $('#personNoteHint').textContent = readOnly ? '个人详情' : '修改姓名与备注';
+    $('#personNoteHint').textContent = readOnly ? '个人详情' : '修改姓名、服事者与备注';
+    const servantSelect = $('#personServantSelect');
+    servantSelect.replaceChildren(new Option('未分配', ''));
+    state.servants.forEach(servant=>servantSelect.add(new Option(servant.name, servant.id)));
+    servantSelect.value = state.servants.some(servant=>servant.id === person.servantId) ? person.servantId : '';
+    servantSelect.disabled = readOnly;
     $('#personNameInput').value = person.name || '';
     $$('input[name="personGender"]').forEach(input=>{
       input.checked = input.value === person.gender;
@@ -1206,11 +1313,12 @@ function enableItemActions(){
     $('#personNoteInput').readOnly = readOnly;
     $('#personNameInput').tabIndex = readOnly ? -1 : 0;
     $('#personNoteInput').tabIndex = readOnly ? -1 : 0;
+    $('#editPersonNoteBtn').style.display = readOnly ? '' : 'none';
     $('#savePersonNoteBtn').style.display = readOnly ? 'none' : '';
     $('#deletePersonBtn').style.display = readOnly ? 'none' : '';
     $('#cancelPersonNoteBtn').textContent = readOnly ? '关闭' : '取消';
     $('#personNoteDialog').returnValue = '';
-    $('#personNoteDialog').showModal();
+    if(!dialog.open) dialog.showModal();
     if(!readOnly) requestAnimationFrame(()=>$('#personNameInput').focus());
   }
 
@@ -1461,12 +1569,16 @@ function enableItemActions(){
       activeListKey = view === 'fall2026' || view === 'nyuBrooklyn' || view === 'flushing' ? view : 'main';
       updateStatusHeadings();
       $('.workspace-layout').dataset.view = view;
+      $('.add-group').hidden = view === 'servants';
+      $('#toggleBulkBtn').hidden = view === 'servants';
+      if(view === 'servants') $('#bulkBox').style.display = 'none';
       const titles = {
         board: ['Long Island City', '拖动姓名更新进度，点击详情查看个人备注。'],
         categories: ['分组整理', '在弟兄姊妹、预备受浸与福音朋友之间拖动姓名。'],
         fall2026: ['哥大校园', '独立的哥大校园福音名单。'],
         nyuBrooklyn: ['NYU- Brooklyn', '独立的 NYU Brooklyn 福音名单，初始为空。'],
         flushing: ['Flushing', '独立的 Flushing 福音名单，初始为空。'],
+        servants: ['服事者', '添加服事者，在人员编辑中选择后，名单会自动显示在对应栏里。'],
         notice: ['Notice', '发布聚会安排、代祷和服事提醒。']
       };
       $('#workspaceTitle').textContent = titles[view][0];
@@ -1484,6 +1596,9 @@ function enableItemActions(){
   $('#noticeInput').addEventListener('keydown', e=>{
     if((e.metaKey || e.ctrlKey) && e.key === 'Enter') addNotice();
   });
+  $('#editPersonNoteBtn').addEventListener('click', ()=>{
+    if(editingPersonNoteId) openPersonNote(editingPersonNoteId, false, editingPersonListKey);
+  });
   $('#cancelPersonNoteBtn').addEventListener('click', ()=>{
     editingPersonNoteId = null;
     $('#personNoteDialog').close();
@@ -1498,12 +1613,12 @@ function enableItemActions(){
   $('#deletePersonBtn').addEventListener('click', ()=>{
     if(!editingPersonNoteId) return;
     const state = load();
-    const person = (getListData(state).people||[]).find(p=>p.id === editingPersonNoteId);
+    const person = (getListData(state, editingPersonListKey).people||[]).find(p=>p.id === editingPersonNoteId);
     if(!confirm(`确定删除“${person?.name || '该对象'}”？`)) return;
     const id = editingPersonNoteId;
     editingPersonNoteId = null;
     $('#personNoteDialog').close();
-    deletePerson(id);
+    deletePerson(id, editingPersonListKey);
     render();
   });
   $('#personNoteDialog').addEventListener('close', ()=>{
@@ -1512,12 +1627,15 @@ function enableItemActions(){
       return;
     }
     const state = load();
-    const data = getListData(state);
+    const data = getListData(state, editingPersonListKey);
     const person = (data.people||[]).find(p=>p.id === editingPersonNoteId);
     const name = normalizedName($('#personNameInput').value);
     if(person && name) person.name = name;
     const selectedGender = document.querySelector('input[name="personGender"]:checked');
     if(person){
+      const servantId = $('#personServantSelect').value;
+      if(state.servants.some(servant=>servant.id === servantId)) person.servantId = servantId;
+      else delete person.servantId;
       if(selectedGender) person.gender = selectedGender.value;
       else delete person.gender;
     }
