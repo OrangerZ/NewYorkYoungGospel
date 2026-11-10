@@ -236,13 +236,15 @@
   .note-dialog.view-mode #personNameInput,
   .note-dialog.view-mode .gender-field{ display:none; }
   .note-dialog.view-mode label[for="personNoteInput"]{ margin-top:17px; color:#9a8661; font-size:10px; letter-spacing:.12em; }
-  .note-dialog.view-mode #personNoteInput{ min-height:250px; padding:4px 0; border:0; color:#384152; background:transparent; box-shadow:none; resize:none; font-family:Georgia,"Songti SC",serif; font-size:14px; line-height:1.9; }
+  #personNoteDisplay{ display:none; white-space:pre-wrap; overflow-wrap:anywhere; margin:0; }
+  .note-dialog.view-mode #personNoteInput{ display:none; }
+  .note-dialog.view-mode #personNoteDisplay{ display:block; min-height:250px; padding:4px 0; border:0; color:#384152; background:transparent; box-shadow:none; resize:none; font-family:Georgia,"Songti SC",serif; font-size:14px; line-height:1.9; }
   .note-dialog.view-mode .dialog-actions{ margin-top:7px; padding-top:14px; border-top:1px solid #e6dfd2; }
   .note-dialog.edit-mode #personNoteInput{ min-height:280px; }
-  @media(max-width:580px){ .note-dialog form,.note-dialog.view-mode form{padding:20px}.note-dialog.view-mode #personNoteInput{min-height:210px}.note-dialog.edit-mode #personNoteInput{min-height:230px} }
+  @media(max-width:580px){ .note-dialog form,.note-dialog.view-mode form{padding:20px}.note-dialog.view-mode #personNoteDisplay{min-height:210px}.note-dialog.edit-mode #personNoteInput{min-height:230px} }
   @media(max-width:760px){
     #personNameInput,#personNoteInput,#noticeInput{ font-size:16px; }
-    .note-dialog.view-mode #personNoteInput{ font-size:16px; }
+    .note-dialog.view-mode #personNoteDisplay{ font-size:16px; }
   }
 
   /* 统一为适合中文屏幕阅读的字体 */
@@ -407,6 +409,9 @@
   .servant-person .chip{flex-shrink:0}
   @media(max-width:600px){.servant-column{grid-template-columns:1fr;gap:6px}.servant-column h3{padding:0 0 6px}}
   .servant-person small{display:block;color:#687184;margin-top:4px}
+  #personServantDisplay{margin:8px 0 16px;color:#384152;font-size:14px;overflow-wrap:anywhere}
+  .note-dialog.view-mode #personServantSelect{display:none}
+  .note-dialog.edit-mode #personServantDisplay{display:none}
   #personServantSelect{width:100%;padding:10px;border:1px solid #d4d8dd;border-radius:8px;margin:8px 0 16px;background:#fff;color:#17233b}
 </style>
 </head>
@@ -557,13 +562,15 @@
       </div>
     </div>
     <label for="personServantSelect">服事者</label>
+    <p id="personServantDisplay"></p>
     <select id="personServantSelect" aria-label="服事者选择"></select>
     <label for="personNoteInput">备注</label>
+    <p id="personNoteDisplay"></p>
     <textarea id="personNoteInput" placeholder="记录联系方式、邀请进度或其他信息…"></textarea>
     <div class="dialog-actions">
-      <button type="button" id="editPersonNoteBtn" class="primary">编辑资料</button>
       <button type="button" id="deletePersonBtn" class="danger">删除</button>
       <button type="button" id="cancelPersonNoteBtn">关闭</button>
+      <button type="button" id="editPersonNoteBtn" class="primary">编辑资料</button>
       <button type="submit" id="savePersonNoteBtn" class="primary" value="save">保存</button>
     </div>
   </form>
@@ -1302,12 +1309,14 @@ function enableItemActions(){
     state.servants.forEach(servant=>servantSelect.add(new Option(servant.name, servant.id)));
     servantSelect.value = state.servants.some(servant=>servant.id === person.servantId) ? person.servantId : '';
     servantSelect.disabled = readOnly;
+    $('#personServantDisplay').textContent = state.servants.find(servant=>servant.id === person.servantId)?.name || '未分配';
     $('#personNameInput').value = person.name || '';
     $$('input[name="personGender"]').forEach(input=>{
       input.checked = input.value === person.gender;
       input.disabled = readOnly;
     });
     $('#personNoteInput').value = (data.personNotes && data.personNotes[id]) || '';
+    $('#personNoteDisplay').textContent = $('#personNoteInput').value || '暂无备注';
     $('#personNoteInput').placeholder = readOnly ? '暂无备注' : '记录联系方式、邀请进度或其他信息…';
     $('#personNameInput').readOnly = readOnly;
     $('#personNoteInput').readOnly = readOnly;
@@ -1315,6 +1324,7 @@ function enableItemActions(){
     $('#personNoteInput').tabIndex = readOnly ? -1 : 0;
     $('#editPersonNoteBtn').style.display = readOnly ? '' : 'none';
     $('#savePersonNoteBtn').style.display = readOnly ? 'none' : '';
+    $('#savePersonNoteBtn').textContent = '保存';
     $('#deletePersonBtn').style.display = readOnly ? 'none' : '';
     $('#cancelPersonNoteBtn').textContent = readOnly ? '关闭' : '取消';
     $('#personNoteDialog').returnValue = '';
@@ -1622,20 +1632,22 @@ function enableItemActions(){
     render();
   });
   $('#personNoteDialog').addEventListener('close', ()=>{
-    if($('#personNoteDialog').returnValue !== 'save' || !editingPersonNoteId){
+    if($('#personNoteDialog').returnValue !== 'save' || !editingPersonNoteId || $('#personNameInput').readOnly){
       editingPersonNoteId = null;
       return;
     }
     const state = load();
     const data = getListData(state, editingPersonListKey);
     const person = (data.people||[]).find(p=>p.id === editingPersonNoteId);
+    const servantId = $('#personServantSelect').value;
+    if(person){
+      if(state.servants.some(servant=>servant.id === servantId)) person.servantId = servantId;
+      else delete person.servantId;
+    }
     const name = normalizedName($('#personNameInput').value);
     if(person && name) person.name = name;
     const selectedGender = document.querySelector('input[name="personGender"]:checked');
     if(person){
-      const servantId = $('#personServantSelect').value;
-      if(state.servants.some(servant=>servant.id === servantId)) person.servantId = servantId;
-      else delete person.servantId;
       if(selectedGender) person.gender = selectedGender.value;
       else delete person.gender;
     }

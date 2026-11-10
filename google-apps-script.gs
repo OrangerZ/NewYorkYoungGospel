@@ -24,6 +24,8 @@ function doPost(e) {
     saveState_(ss, payload.state);
     writeMainData_(ss, payload.state);
     writeFallData_(ss, payload.state);
+    writePeopleData_(ss, payload.state, payload.state.campaigns && payload.state.campaigns.nyuBrooklyn || {}, 'NYU- Brooklyn');
+    writePeopleData_(ss, payload.state, payload.state.campaigns && payload.state.campaigns.flushing || {}, 'Flushing');
     writeNoticeData_(ss, payload.state);
     return json_({ok:true, savedAt:new Date().toISOString()});
   } catch (err) {
@@ -41,28 +43,25 @@ function saveState_(ss, state) {
 }
 
 function writeMainData_(ss, state) {
-  const labels = {pool:'邀请', yes:'确定', maybe:'待定', no:'不来'};
-  const cats = {member:'弟兄姊妹', friend:'福音朋友'};
-  const rows = (state.people || []).map(person => {
-    const category = state.bottomTypes && state.bottomTypes[person.id] || person.category || 'friend';
-    return [person.name || '', cats[category] || category,
-      labels[state.statuses && state.statuses[person.id] || 'pool'],
-      state.personNotes && state.personNotes[person.id] || person.note || '', person.id || ''];
-  });
-  writeRows_(getOrCreateSheet_(ss, DATA_SHEET), ['Name','Category','Status','Note','Person ID'], rows);
+  writePeopleData_(ss, state, state, DATA_SHEET);
 }
 
 function writeFallData_(ss, state) {
-  const fall = state.campaigns && state.campaigns.fall2026 || {};
-  const labels = {pool:'邀请', yes:'确定', maybe:'待定', no:'不来'};
-  const cats = {member:'弟兄姊妹', friend:'福音朋友'};
-  const rows = (fall.people || []).map(person => {
+  writePeopleData_(ss, state, state.campaigns && state.campaigns.fall2026 || {}, FALL_SHEET);
+}
+
+function writePeopleData_(ss, state, data, sheetName) {
+  const labels = {pool:'遇到的', yes:'积极回复', maybe:'很少回复', no:'几乎不回'};
+  const cats = {member:'弟兄姊妹', baptism:'预备受浸', friend:'福音朋友'};
+  const servants = new Map((state.servants || []).map(servant => [servant.id, servant.name]));
+  const rows = (data.people || []).map(person => {
     const category = state.bottomTypes && state.bottomTypes[person.id] || person.category || 'friend';
     return [person.name || '', cats[category] || category,
-      labels[fall.statuses && fall.statuses[person.id] || 'pool'],
-      fall.personNotes && fall.personNotes[person.id] || person.note || '', person.id || ''];
+      labels[data.statuses && data.statuses[person.id] || 'pool'],
+      data.personNotes && data.personNotes[person.id] || person.note || '', person.id || '',
+      servants.get(person.servantId) || ''];
   });
-  writeRows_(getOrCreateSheet_(ss, FALL_SHEET), ['Name','Category','Status','Note','Person ID'], rows);
+  writeRows_(getOrCreateSheet_(ss, sheetName), ['Name','Category','Status','Note','Person ID','服事者'], rows);
 }
 
 function writeNoticeData_(ss, state) {
