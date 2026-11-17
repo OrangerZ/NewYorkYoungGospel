@@ -382,15 +382,42 @@
   .bottom-panel .bcol{ min-height:330px; padding:16px; background:#fff; }
   .bottom-panel .blist{ min-height:260px; align-content:flex-start; }
   .bottom-panel .btag{ padding:8px 11px; font-size:12px; }
-  .notice-panel{ display:none; width:100%; max-width:820px; padding:22px; border:1px solid #d9d5cc; border-radius:14px; background:#fffdf8; box-shadow:0 7px 24px rgba(30,39,54,.055); }
+  .notice-panel{ display:none; width:100%; padding:22px; border:1px solid #d9d5cc; border-radius:14px; background:#fffdf8; box-shadow:0 7px 24px rgba(30,39,54,.055); }
+  .notice-section{ padding:18px; border:1px solid #e3ded4; border-radius:12px; background:#fff; }
+  .notice-section h3{ margin:0 0 12px; font-size:15px; }
+  .notice-columns{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:12px; }
+  .notice-columns > .notice-section{ position:relative; overflow:hidden; border-top:4px solid var(--location-color); background:var(--location-bg); }
+  .notice-columns > .notice-section > h3{ display:flex; align-items:center; gap:8px; color:var(--location-color); }
+  .notice-columns > .notice-section > h3::before{ content:""; width:9px; height:9px; flex:none; border-radius:50%; background:var(--location-color); }
+  .notice-columns [data-notice-section="columbia"]{ --location-color:#426b9d; --location-bg:#f5f8fc; }
+  .notice-columns [data-notice-section="lic"]{ --location-color:#39816e; --location-bg:#f3f9f6; }
+  .notice-columns [data-notice-section="flushing"]{ --location-color:#a36a44; --location-bg:#fdf7f2; }
+  .notice-columns .notice-item{ border-left-color:var(--location-color); background:#fff; }
+  .notice-columns .prayer-section{ background:rgba(255,255,255,.7); }
+  .prayer-section{ margin-top:20px; padding:16px; border:1px solid #e8e2d6; border-radius:12px; background:#faf8f3; }
+  .notice-section .prayer-heading{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 12px; font-size:13px; }
+  .prayer-count{ padding:3px 8px; border-radius:999px; background:#ede9df; color:#6f7787; font-size:11px; font-weight:600; white-space:nowrap; }
+  .prayer-form{ display:flex; align-items:stretch; gap:6px; }
+  .prayer-form input{ min-width:0; width:100%; max-width:180px; flex:1; padding:7px 9px; border:1px solid #ded9ce; border-radius:8px; outline:none; background:#fff; font-size:13px; }
+  .prayer-form input:focus{ border-color:#7188a7; box-shadow:0 0 0 3px rgba(79,126,217,.10); }
+  .prayer-form button{ flex:none; padding:8px 11px; border:1px solid #233754; border-radius:8px; color:#fff; background:#233754; cursor:pointer; font-size:12px; font-weight:650; }
+  .prayer-form button:hover{ background:#344d70; }
+  .prayer-list{ display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; color:#969ba3; font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
+  .prayer-person{ display:inline-flex; align-items:center; max-width:100%; gap:7px; padding:4px 5px 4px 10px; border:1px solid #ded9ce; border-radius:999px; color:#354359; background:#fff; font-size:12px; }
+  .prayer-person span{ min-width:0; overflow-wrap:anywhere; }
+  .prayer-person button{ display:grid; place-items:center; flex:none; width:24px; height:24px; padding:0; border:0; border-radius:50%; background:#f3f0e9; color:#78808b; cursor:pointer; font-size:17px; line-height:1; }
+  .prayer-person button:hover,.prayer-person button:focus-visible{ color:#a3424b; background:#fae9e9; }
+  .prayer-person select{ max-width:120px; }
+  @media(max-width:760px){ .notice-columns{ grid-template-columns:1fr; } }
   .notice-compose{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:9px; padding-bottom:18px; border-bottom:1px solid #e3ded4; }
-  #noticeInput{ width:100%; min-height:42px; padding:10px 12px; border:1px solid #cbc7be; border-radius:9px; outline:none; resize:vertical; font-size:13px; }
-  #noticeInput:focus{ border-color:#7188a7; box-shadow:0 0 0 3px rgba(79,126,217,.10); }
-  #noticeAddBtn{ align-self:start; min-height:42px; padding:8px 17px; border:1px solid #233754; border-radius:9px; color:#fff; background:#233754; cursor:pointer; font-size:12px; font-weight:650; }
+  .notice-input{ width:100%; min-height:42px; padding:10px 12px; border:1px solid #cbc7be; border-radius:9px; outline:none; resize:vertical; font-size:13px; }
+  .notice-input:focus{ border-color:#7188a7; box-shadow:0 0 0 3px rgba(79,126,217,.10); }
+  .notice-compose button{ align-self:start; min-height:42px; padding:8px 17px; border:1px solid #233754; border-radius:9px; color:#fff; background:#233754; cursor:pointer; font-size:12px; font-weight:650; }
   .notice-list{ display:grid; gap:10px; margin-top:17px; }
-  .notice-item{ padding:15px 16px; border-left:4px solid #f2c94c; border-radius:3px 10px 10px 3px; background:#f8f7f3; }
-  .notice-text{ margin:0; color:#263247; font-size:13px; line-height:1.7; white-space:pre-wrap; overflow-wrap:anywhere; }
-  .notice-meta{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:9px; color:#8a9099; font-size:10px; }
+  .notice-item{ display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; padding:5px 10px; border:1px solid #cbd8e7; border-left:4px solid #587ba5; border-radius:4px 10px 10px 4px; background:#edf3f9; box-shadow:0 2px 6px rgba(35,55,84,.06); }
+  [data-notice-section="public"] .notice-item{ border-color:#e5cf98; border-left-color:#bf8a2e; background:#fff3d5; }
+  .notice-text{ flex:1; min-width:0; margin:0; color:#172b46; font-size:14px; font-weight:500; line-height:1.45; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .notice-meta{ flex:none; display:flex; align-items:center; }
   .notice-actions{ display:flex; gap:5px; }
   .notice-actions button{ padding:3px 7px; border:1px solid #d5d1c8; border-radius:6px; color:#596577; background:#fff; cursor:pointer; font-size:10px; }
   .notice-empty{ padding:35px 10px; color:#969ba3; font-size:12px; text-align:center; }
@@ -487,7 +514,7 @@
     <button type="button" class="view-tab" data-view-target="flushing">Flushing</button>
     <button type="button" class="view-tab" data-view-target="categories">Group</button>
     <button type="button" class="view-tab" data-view-target="servants">服事者</button>
-    <button type="button" class="view-tab" data-view-target="notice">Notice</button>
+    <button type="button" class="view-tab" data-view-target="notice">祷告负担</button>
   </nav>
 
   <div class="workspace-layout" data-view="board">
@@ -542,11 +569,17 @@
       <div id="servantColumns" class="servant-columns"></div>
     </section>
     <section class="notice-panel" aria-label="公告">
-      <div class="notice-compose">
-        <textarea id="noticeInput" rows="2" placeholder="写一条新公告…"></textarea>
-        <button type="button" id="noticeAddBtn">发布公告</button>
+      <section class="notice-section" data-notice-section="public">
+        <h3>共同负担</h3>
+        <form class="notice-compose"><textarea class="notice-input" rows="2" aria-label="共同负担内容" placeholder="写一条负担…" required></textarea><button type="submit">发布</button></form>
+        <div class="notice-list"></div>
+      </section>
+      <div class="notice-columns">
+        <section class="notice-section" data-notice-section="columbia"><h3>哥大校园</h3><form class="notice-compose"><textarea class="notice-input" rows="2" aria-label="哥大校园公告内容" placeholder="写一条负担…" required></textarea><button type="submit">发布</button></form><div class="notice-list"></div><div class="prayer-section" data-prayer-section="columbia"><h3 class="prayer-heading">参加祷告的人 <span class="prayer-count">0 人</span></h3><form class="prayer-form"><input aria-label="哥大校园参加祷告的人名" placeholder="输入姓名…" required><button type="submit">＋ 添加</button></form><div class="prayer-list"></div></div></section>
+        <section class="notice-section" data-notice-section="lic"><h3>Long Island City</h3><form class="notice-compose"><textarea class="notice-input" rows="2" aria-label="Long Island City 公告内容" placeholder="写一条负担…" required></textarea><button type="submit">发布</button></form><div class="notice-list"></div><div class="prayer-section" data-prayer-section="lic"><h3 class="prayer-heading">参加祷告的人 <span class="prayer-count">0 人</span></h3><form class="prayer-form"><input aria-label="Long Island City参加祷告的人名" placeholder="输入姓名…" required><button type="submit">＋ 添加</button></form><div class="prayer-list"></div></div></section>
+        <section class="notice-section" data-notice-section="flushing"><h3>Flushing</h3><form class="notice-compose"><textarea class="notice-input" rows="2" aria-label="Flushing 公告内容" placeholder="写一条负担…" required></textarea><button type="submit">发布</button></form><div class="notice-list"></div><div class="prayer-section" data-prayer-section="flushing"><h3 class="prayer-heading">参加祷告的人 <span class="prayer-count">0 人</span></h3><form class="prayer-form"><input aria-label="Flushing参加祷告的人名" placeholder="输入姓名…" required><button type="submit">＋ 添加</button></form><div class="prayer-list"></div></div></section>
       </div>
-      <div id="noticeList" class="notice-list"></div>
+      <section id="unassignedPrayer" class="notice-section prayer-section" hidden><h3>待分配的祷告名单</h3><p class="muted">请为之前添加的姓名选择地点。</p><div class="prayer-list"></div></section>
     </section>
   </div>
   <footer>数据已连接 Google Sheet</footer>
@@ -637,7 +670,8 @@
         deletedPeople: { main:[], fall2026:[], nyuBrooklyn:[], flushing:[] },
         campaigns: { fall2026: emptyListData(), nyuBrooklyn: emptyListData(), flushing: emptyListData() },
         servants: [],
-        notices: []
+        notices: [],
+        prayerPeople: []
       };
       localStorage.setItem(storeKey, JSON.stringify(init));
       return init;
@@ -662,6 +696,7 @@
     if(!state.campaigns.nyuBrooklyn) state.campaigns.nyuBrooklyn = emptyListData();
     if(!state.campaigns.flushing) state.campaigns.flushing = emptyListData();
     if(!Array.isArray(state.notices)) state.notices = [];
+    if(!Array.isArray(state.prayerPeople)) state.prayerPeople = [];
 
     const fall = state.campaigns.fall2026;
     if(!fall.people) fall.people = [];
@@ -951,64 +986,90 @@
 
   function renderNotices(){
     const state = load();
-    const list = $('#noticeList');
-    if(!list) return;
-    list.innerHTML = '';
-    const notices = (state.notices||[]).slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
-    if(!notices.length){
-      list.innerHTML = '<div class="notice-empty">还没有公告</div>';
-      return;
-    }
-    notices.forEach(notice=>{
-      const item = document.createElement('article');
-      item.className = 'notice-item';
-      const text = document.createElement('p');
-      text.className = 'notice-text';
-      text.textContent = notice.text || '';
-      const meta = document.createElement('div');
-      meta.className = 'notice-meta';
-      const time = document.createElement('span');
-      time.textContent = notice.createdAt ? new Date(notice.createdAt).toLocaleString('zh-CN') : '';
-      const actions = document.createElement('span');
-      actions.className = 'notice-actions';
-      actions.innerHTML = '<button type="button" data-action="edit">编辑</button><button type="button" data-action="delete">删除</button>';
-      actions.addEventListener('click', e=>{
-        const action = e.target.dataset.action;
-        if(!action) return;
-        const latest = load();
-        const target = (latest.notices||[]).find(n=>n.id===notice.id);
-        if(!target) return;
-        if(action === 'edit'){
-          const value = prompt('编辑公告：', target.text || '');
-          if(value === null || !value.trim()) return;
-          target.text = value.trim();
-          target.updatedAt = new Date().toISOString();
-        }else if(action === 'delete'){
-          if(!confirm('确定删除这条公告？')) return;
-          latest.notices = latest.notices.filter(n=>n.id!==notice.id);
-        }
-        save(latest);
-        renderNotices();
-    renderServants();
+    document.querySelectorAll('[data-notice-section]').forEach(section=>{
+      const list = section.querySelector('.notice-list');
+      list.replaceChildren();
+      const notices = state.notices.filter(n=>(n.section || 'public') === section.dataset.noticeSection)
+        .slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+      if(!notices.length){ list.innerHTML = '<div class="notice-empty">还没有发布负担</div>'; return; }
+      notices.forEach(notice=>{
+        const item = document.createElement('article'); item.className = 'notice-item';
+        const text = document.createElement('p'); text.className = 'notice-text'; text.textContent = notice.text || '';
+        const meta = document.createElement('div'); meta.className = 'notice-meta';
+        const actions = document.createElement('span'); actions.className = 'notice-actions';
+        actions.innerHTML = '<button type="button" data-action="edit">编辑</button><button type="button" data-action="delete">删除</button>';
+        actions.addEventListener('click', e=>{
+          const action = e.target.dataset.action; if(!action) return;
+          const latest = load(); const target = latest.notices.find(n=>n.id===notice.id); if(!target) return;
+          if(action === 'edit'){
+            const value = prompt('编辑公告：', target.text || '');
+            if(value === null || !value.trim()) return;
+            target.text = value.trim(); target.updatedAt = new Date().toISOString();
+          }else if(action === 'delete'){
+            if(!confirm('确定删除这条公告？')) return;
+            latest.notices = latest.notices.filter(n=>n.id!==notice.id);
+          }
+          save(latest); renderNotices();
+        });
+        meta.appendChild(actions); item.append(text, meta); list.appendChild(item);
       });
-      meta.append(time, actions);
-      item.append(text, meta);
-      list.appendChild(item);
     });
+    function renderPrayerPerson(person, list, unassigned){
+      const tag = document.createElement('span'); tag.className = 'prayer-person';
+      const name = document.createElement('span'); name.textContent = person.name;
+      tag.appendChild(name);
+      if(unassigned){
+        const select = document.createElement('select'); select.setAttribute('aria-label', '为' + person.name + '选择地点');
+        [['','选择地点'],['columbia','哥大校园'],['lic','Long Island City'],['flushing','Flushing']].forEach(([value,label])=>{
+          const option = document.createElement('option'); option.value = value; option.textContent = label; select.appendChild(option);
+        });
+        select.addEventListener('change', ()=>{
+          if(!select.value) return;
+          const latest = load(); const target = latest.prayerPeople.find(p=>p.id === person.id);
+          if(target){ target.section = select.value; save(latest); renderNotices(); }
+        });
+        tag.appendChild(select);
+      }
+      const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×';
+      remove.setAttribute('aria-label', '移除' + person.name);
+      remove.addEventListener('click', ()=>{
+        if(!confirm('确定移除 ' + person.name + '？')) return;
+        const latest = load(); latest.prayerPeople = latest.prayerPeople.filter(p=>p.id !== person.id);
+        save(latest); renderNotices();
+      });
+      tag.appendChild(remove); list.appendChild(tag);
+    }
+    document.querySelectorAll('[data-prayer-section]').forEach(section=>{
+      const list = section.querySelector('.prayer-list'); list.replaceChildren();
+      const people = state.prayerPeople.filter(p=>p.section === section.dataset.prayerSection);
+      section.querySelector('.prayer-count').textContent = people.length + ' 人';
+      people.forEach(person=>renderPrayerPerson(person, list, false));
+      if(!people.length) list.textContent = '还没有添加参加祷告的人';
+    });
+    const unassigned = state.prayerPeople.filter(p=>!['columbia','lic','flushing'].includes(p.section));
+    const unassignedSection = $('#unassignedPrayer'); unassignedSection.hidden = !unassigned.length;
+    const unassignedList = unassignedSection.querySelector('.prayer-list'); unassignedList.replaceChildren();
+    unassigned.forEach(person=>renderPrayerPerson(person, unassignedList, true));
   }
 
-  function addNotice(){
-    const input = $('#noticeInput');
-    const text = (input.value||'').trim();
-    if(!text) return;
-    const state = load();
-    state.notices = state.notices || [];
-    state.notices.push({ id:'n_'+Math.random().toString(36).slice(2,10), text, createdAt:new Date().toISOString() });
-    input.value = '';
-    save(state);
-    renderNotices();
-    renderServants();
-  }
+  document.querySelectorAll('[data-notice-section]').forEach(section=>{
+    const form = section.querySelector('form'); const input = form.querySelector('textarea');
+    form.addEventListener('submit', e=>{
+      e.preventDefault(); const text = input.value.trim(); if(!text) return;
+      const state = load(); state.notices.push({id:'n_' + crypto.randomUUID(), section:section.dataset.noticeSection, text, createdAt:new Date().toISOString()});
+      input.value = ''; save(state); renderNotices();
+    });
+    input.addEventListener('keydown', e=>{ if((e.metaKey || e.ctrlKey) && e.key === 'Enter') form.requestSubmit(); });
+  });
+  document.querySelectorAll('[data-prayer-section]').forEach(section=>{
+    section.querySelector('form').addEventListener('submit', e=>{
+      e.preventDefault(); const input = e.currentTarget.querySelector('input'); const name = normalizedName(input.value); if(!name) return;
+      const state = load(); const location = section.dataset.prayerSection;
+      if(state.prayerPeople.some(p=>p.section === location && p.name.toLowerCase() === name.toLowerCase())){ alert('这个名字已经添加了'); return; }
+      state.prayerPeople.push({id:'pr_' + crypto.randomUUID(), section:location, name, createdAt:new Date().toISOString()});
+      input.value = ''; save(state); renderNotices();
+    });
+  });
 
   // —— 下方分类（按 bottomOrder 渲染 + 兜底）
   function renderBottomPanel(){
@@ -1465,8 +1526,8 @@ function enableItemActions(){
       if(!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       if(data && data.code === 'STALE_STATE'){
-        setSyncStatus('云端已有更新，请刷新');
-        if(!silent) alert('云端名单已被其他人更新。为避免覆盖对方的数据，本次保存已停止。请刷新网页后再编辑。');
+        setSyncStatus('云端已有更新，本地修改未同步');
+        alert('云端数据已被更新，本地修改尚未同步。请先导出或记录本地修改，再读取云端数据并重新应用修改。');
         return;
       }
       if(!data || !data.ok) throw new Error((data && data.error) || '同步失败');
@@ -1509,14 +1570,34 @@ function enableItemActions(){
     if(!silent && !confirm('从 Google Sheet 读取会覆盖当前浏览器里的实时名单。继续吗？')) return;
     if(silent && localChangesPending) return;
     setSyncStatus('正在读取…');
+    const revisionAtStart = localRevision;
     try{
       const sep = url.includes('?') ? '&' : '?';
       const res = await fetch(url + sep + 'action=load&_=' + Date.now());
-      const data = await res.json();
+      if(!res.ok) throw new Error('HTTP ' + res.status + '，请检查 Web App 部署和访问权限');
+      let data;
+      try{ data = await res.json(); }catch(_){ throw new Error('服务器没有返回有效数据，请检查 Web App 地址和访问权限'); }
       if(!data || !data.ok) throw new Error((data && data.error) || '读取失败');
-      if(!data.state) throw new Error('Google Sheet 中还没有云端数据');
-      const state = data.state;
-      if(!state.people || !state.statuses || !Array.isArray(state.history)) throw new Error('云端数据格式不正确');
+      if(!data.state){
+        if(localRevision !== revisionAtStart || (silent && localChangesPending)){
+          setSyncStatus('本地有新修改，已取消读取');
+          return;
+        }
+        // 空云端没有可读取的状态：只清除旧的比较基准，保留当前本地数据。
+        localStorage.removeItem(cloudBaseKey);
+        setSyncStatus('云端为空，本地数据已保留');
+        if(!silent) alert('Google Sheet 中还没有云端数据。本地数据已保留；请确认表格和本地内容无误后，点击“同步到云端”建立云端数据。');
+        return;
+      }
+      if(localRevision !== revisionAtStart || (silent && localChangesPending)){
+        setSyncStatus('本地有新修改，已取消读取');
+        return;
+      }
+      const cloudState = data.state;
+      if(typeof cloudState !== 'object' || Array.isArray(cloudState) || !Array.isArray(cloudState.people)) throw new Error('云端数据格式不正确：缺少人员名单');
+      const state = JSON.parse(JSON.stringify(cloudState));
+      state.statuses = state.statuses || {};
+      state.history = Array.isArray(state.history) ? state.history : [];
       // 兼容表格按 people[].note 返回个人备注的格式。
       state.personNotes = state.personNotes || {};
       state.people.forEach(person=>{
@@ -1525,39 +1606,48 @@ function enableItemActions(){
         }
       });
       const fallData = getListData(state, 'fall2026');
+      fallData.people = Array.isArray(fallData.people) ? fallData.people : [];
+      fallData.personNotes = fallData.personNotes || {};
       fallData.people.forEach(person=>{
         if(person && person.id && typeof person.note === 'string'){
           fallData.personNotes[person.id] = person.note;
         }
       });
       const nyuData = getListData(state, 'nyuBrooklyn');
+      nyuData.people = Array.isArray(nyuData.people) ? nyuData.people : [];
+      nyuData.personNotes = nyuData.personNotes || {};
       nyuData.people.forEach(person=>{
         if(person && person.id && typeof person.note === 'string'){
           nyuData.personNotes[person.id] = person.note;
         }
       });
       const flushingData = getListData(state, 'flushing');
+      flushingData.people = Array.isArray(flushingData.people) ? flushingData.people : [];
+      flushingData.personNotes = flushingData.personNotes || {};
       flushingData.people.forEach(person=>{
         if(person && person.id && typeof person.note === 'string'){
           flushingData.personNotes[person.id] = person.note;
         }
       });
       localStorage.setItem(storeKey, JSON.stringify(state));
-      saveCloudBase(state);
+      saveCloudBase(cloudState);
+      localChangesPending = false;
+      clearTimeout(autoSyncTimer);
       render();
       setSyncStatus('已读取 ' + new Date().toLocaleTimeString());
       if(!silent) alert('已从 Google Sheet 读取');
     }catch(err){
       console.error(err);
-      setSyncStatus('读取失败');
-      if(!silent) alert('读取失败：' + err.message);
+      const message = err instanceof TypeError ? '无法连接 Web App，请检查网络、部署地址和访问权限' : err.message;
+      setSyncStatus('读取失败：' + message);
+      if(!silent) alert('读取失败：' + message);
     }
   }
 
   async function startAutomaticGoogleSync(){
+    autoSyncEnabled = true;
     setSyncStatus('正在读取云端数据…');
     await loadFromGoogleSheet(true);
-    autoSyncEnabled = true;
   }
 
   // —— 事件绑定
@@ -1595,7 +1685,7 @@ function enableItemActions(){
         nyuBrooklyn: ['NYU- Brooklyn', '独立的 NYU Brooklyn 福音名单，初始为空。'],
         flushing: ['Flushing', '独立的 Flushing 福音名单，初始为空。'],
         servants: ['服事者', '添加服事者，在人员编辑中选择后，名单会自动显示在对应栏里。'],
-        notice: ['Notice', '发布聚会安排、代祷和服事提醒。']
+        notice: ['祷告负担', '发布聚会安排、代祷和服事提醒。']
       };
       $('#workspaceTitle').textContent = titles[view][0];
       $('#workspaceDescription').textContent = titles[view][1];
@@ -1607,10 +1697,6 @@ function enableItemActions(){
       });
       render();
     });
-  });
-  $('#noticeAddBtn').addEventListener('click', addNotice);
-  $('#noticeInput').addEventListener('keydown', e=>{
-    if((e.metaKey || e.ctrlKey) && e.key === 'Enter') addNotice();
   });
   $('#editPersonNoteBtn').addEventListener('click', ()=>{
     if(editingPersonNoteId) openPersonNote(editingPersonNoteId, false, editingPersonListKey);
