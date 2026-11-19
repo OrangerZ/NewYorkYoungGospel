@@ -443,14 +443,30 @@
   .note-dialog.view-mode #personServantSelect{display:none}
   .note-dialog.edit-mode #personServantDisplay{display:none}
   #personServantSelect{width:100%;padding:10px;border:1px solid #d4d8dd;border-radius:8px;margin:8px 0 16px;background:#fff;color:#17233b}
+  body.tabs-locked .view-tab:not([data-view-target="notice"]),
+  body.tabs-locked .control-panel,
+  body.tabs-locked .sheet-link,
+  body.tabs-locked #lockTabsBtn{display:none}
+  body:not(.tabs-locked) #tabUnlockForm{display:none}
+  body.tabs-locked .tab-access{display:none}
+  .tab-access{margin-bottom:14px}
+  #tabAccessDialog{width:min(320px,calc(100% - 48px));padding:24px;border:1px solid #d4d8dd;border-radius:12px;background:#fffdf8;color:#17233b}
+  #tabAccessDialog::backdrop{background:rgba(23,35,59,.3)}
+  #tabAccessDialog form{display:grid;gap:12px}
+  #tabAccessDialog input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #d4d8dd;border-radius:7px}
+  .access-actions{display:flex;justify-content:flex-end;gap:8px}
+  .tab-access form{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .tab-access input{min-width:0;max-width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #d4d8dd;border-radius:7px}
+  .tab-access label{font-size:12px;color:#647083}
+  #tabAccessMessage{margin:6px 0 0;font-size:12px;color:#a33232}
 </style>
 </head>
-<body>
+<body class="tabs-locked">
 <div class="app-shell">
 <aside class="sidebar">
   <header>
     <div class="brand">
-      <div class="brand-mark" aria-hidden="true">NY</div>
+      <button type="button" class="brand-mark" id="brandAccessBtn" aria-label="NY">NY</button>
       <div>
         <p class="eyebrow">New York Young Gospel</p>
         <h1><span>大纽约</span><span>青年人服事</span></h1>
@@ -502,22 +518,37 @@
   <div class="workspace-heading">
     <div>
       <p class="eyebrow dark">People Care Board</p>
-      <h2 id="workspaceTitle">哥大校园</h2>
-      <p id="workspaceDescription">独立的哥大校园福音名单。</p>
+      <h2 id="workspaceTitle">祷告负担</h2>
+      <p id="workspaceDescription">发布聚会安排、代祷和服事提醒。</p>
     </div>
   </div>
 
   <nav class="view-tabs" aria-label="工作区视图">
-    <button type="button" class="view-tab active" data-view-target="fall2026">哥大校园</button>
+    <button type="button" class="view-tab" data-view-target="fall2026">哥大校园</button>
     <button type="button" class="view-tab" data-view-target="board">Long Island City</button>
     <button type="button" class="view-tab" data-view-target="nyuBrooklyn">NYU- Brooklyn</button>
     <button type="button" class="view-tab" data-view-target="flushing">Flushing</button>
     <button type="button" class="view-tab" data-view-target="categories">Group</button>
     <button type="button" class="view-tab" data-view-target="servants">服事者</button>
-    <button type="button" class="view-tab" data-view-target="notice">祷告负担</button>
+    <button type="button" class="view-tab active" data-view-target="notice">祷告负担</button>
   </nav>
 
-  <div class="workspace-layout" data-view="board">
+  <div class="tab-access">
+    <button id="lockTabsBtn" type="button">重新锁定</button>
+  </div>
+  <dialog id="tabAccessDialog">
+    <form id="tabUnlockForm">
+      <label for="tabAccessCode">访问码</label>
+      <input id="tabAccessCode" type="password" autocomplete="off" required aria-describedby="tabAccessMessage">
+      <p id="tabAccessMessage" role="status" aria-live="polite"></p>
+      <div class="access-actions">
+        <button id="cancelTabAccessBtn" type="button">取消</button>
+        <button type="submit">确认</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="workspace-layout" data-view="notice">
     <section class="board-area" aria-label="邀请进度">
       <div class="columns">
         <section class="col" data-status="pool">
@@ -1669,9 +1700,54 @@ function enableItemActions(){
   document.getElementById('googleSetupBtn')?.addEventListener('click', setupGoogleSync);
   document.getElementById('googleSaveBtn')?.addEventListener('click', ()=>syncToGoogleSheet(false));
   document.getElementById('googleLoadBtn')?.addEventListener('click', ()=>loadFromGoogleSheet(false));
+  // 页面显示解锁码；这是前端显示控制，不是服务器端身份验证。
+  const TAB_ACCESS_CODE = 'NYYG2026';
+  let tabsUnlocked = false;
+  let accessClickCount = 0;
+  let lastAccessClick = 0;
+  $('#brandAccessBtn').addEventListener('click', ()=>{
+    if(tabsUnlocked) return;
+    const now = Date.now();
+    accessClickCount = now - lastAccessClick < 1000 ? accessClickCount + 1 : 1;
+    lastAccessClick = now;
+    if(accessClickCount < 5) return;
+    accessClickCount = 0;
+    $('#tabAccessDialog').showModal();
+    $('#tabAccessCode').focus();
+  });
+  $('#cancelTabAccessBtn').addEventListener('click', ()=>$('#tabAccessDialog').close());
+  $('#tabAccessDialog').addEventListener('close', ()=>{
+    $('#tabAccessCode').value = '';
+    $('#tabAccessCode').removeAttribute('aria-invalid');
+    $('#tabAccessMessage').textContent = '';
+  });
+  $('#tabUnlockForm').addEventListener('submit', e=>{
+    e.preventDefault();
+    const input = $('#tabAccessCode');
+    if(input.value !== TAB_ACCESS_CODE){
+      $('#tabAccessMessage').textContent = 'Code 不正确，请重新输入。';
+      input.setAttribute('aria-invalid', 'true');
+      input.select();
+      return;
+    }
+    tabsUnlocked = true;
+    input.value = '';
+    input.removeAttribute('aria-invalid');
+    $('#tabAccessMessage').textContent = '';
+    $('#tabAccessDialog').close();
+    document.body.classList.remove('tabs-locked');
+    $('[data-view-target="fall2026"]').focus();
+  });
+  $('#lockTabsBtn').addEventListener('click', ()=>{
+    tabsUnlocked = false;
+    document.body.classList.add('tabs-locked');
+    $('[data-view-target="notice"]').click();
+    $('#brandAccessBtn').focus();
+  });
   $$('.view-tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
       const view = tab.dataset.viewTarget || 'board';
+      if(!tabsUnlocked && view !== 'notice') return;
       activeListKey = view === 'fall2026' || view === 'nyuBrooklyn' || view === 'flushing' ? view : 'main';
       updateStatusHeadings();
       $('.workspace-layout').dataset.view = view;
@@ -1752,8 +1828,8 @@ function enableItemActions(){
     render();
   });
 
-  // —— 初始化
-  render();
+  // —— 初始化：刷新页面后重新锁定。
+  $('[data-view-target="notice"]').click();
   startAutomaticGoogleSync();
 })();
 </script>
