@@ -408,6 +408,20 @@
   .prayer-person button{ display:grid; place-items:center; flex:none; width:24px; height:24px; padding:0; border:0; border-radius:50%; background:#f3f0e9; color:#78808b; cursor:pointer; font-size:17px; line-height:1; }
   .prayer-person button:hover,.prayer-person button:focus-visible{ color:#a3424b; background:#fae9e9; }
   .prayer-person select{ max-width:120px; }
+  .prayer-session-form{ display:flex; flex-wrap:wrap; align-items:end; gap:8px; margin-top:16px; }
+  .prayer-session-form label{ display:grid; gap:5px; min-width:0; font-size:14px; }
+  .prayer-session-form input{ box-sizing:border-box; max-width:100%; min-width:0; padding:8px; border:1px solid #ded9ce; border-radius:8px; background:#fff; font:inherit; }
+  .prayer-session-form button{ padding:9px 12px; border:0; border-radius:8px; background:#233754; color:white; cursor:pointer; font-size:14px; }
+  .prayer-attendees{ flex-basis:100%; min-width:0; margin:0; padding:10px; border:1px solid #ded9ce; border-radius:8px; font-size:14px; }
+  .prayer-attendee-options{ display:flex; flex-wrap:wrap; gap:8px 14px; }
+  .prayer-session-form .prayer-attendee{ display:flex; align-items:center; gap:6px; cursor:pointer; }
+  .prayer-attendee input{ width:18px; height:18px; margin:0; }
+  .prayer-history{ margin-top:14px; font-size:14px; line-height:1.6; overflow-wrap:anywhere; }
+  .prayer-session{ padding:10px 0; border-top:1px solid #ded9ce; }
+  .prayer-session time{ font-weight:600; color:#354359; }
+  .prayer-session p{ margin:4px 0; }
+  .prayer-session button{ border:0; background:transparent; color:#a3424b; cursor:pointer; font-size:14px; }
+
   @media(max-width:760px){ .notice-columns{ grid-template-columns:1fr; } }
   .notice-compose{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:9px; padding-bottom:18px; border-bottom:1px solid #e3ded4; }
   .notice-input{ width:100%; min-height:42px; padding:10px 12px; border:1px solid #cbc7be; border-radius:9px; outline:none; resize:vertical; font-size:13px; }
@@ -702,7 +716,8 @@
         campaigns: { fall2026: emptyListData(), nyuBrooklyn: emptyListData(), flushing: emptyListData() },
         servants: [],
         notices: [],
-        prayerPeople: []
+        prayerPeople: [],
+        prayerSessions: []
       };
       localStorage.setItem(storeKey, JSON.stringify(init));
       return init;
@@ -728,6 +743,7 @@
     if(!state.campaigns.flushing) state.campaigns.flushing = emptyListData();
     if(!Array.isArray(state.notices)) state.notices = [];
     if(!Array.isArray(state.prayerPeople)) state.prayerPeople = [];
+    if(!Array.isArray(state.prayerSessions)) state.prayerSessions = [];
 
     const fall = state.campaigns.fall2026;
     if(!fall.people) fall.people = [];
@@ -1076,6 +1092,39 @@
       section.querySelector('.prayer-count').textContent = people.length + ' 人';
       people.forEach(person=>renderPrayerPerson(person, list, false));
       if(!people.length) list.textContent = '还没有添加参加祷告的人';
+      const options = section.querySelector('.prayer-attendee-options');
+      const selected = new Set(Array.from(options.querySelectorAll('input:checked'), input=>input.value));
+      options.replaceChildren();
+      people.forEach(person=>{
+        const label = document.createElement('label'); label.className = 'prayer-attendee';
+        const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.value = person.id;
+        checkbox.checked = selected.has(person.id);
+        const name = document.createElement('span'); name.textContent = person.name;
+        label.append(checkbox, name); options.appendChild(label);
+      });
+      if(!people.length) options.textContent = '请先在上方添加姓名，再勾选本次参加的人。';
+      const history = section.querySelector('.prayer-history'); history.replaceChildren();
+      const sessions = state.prayerSessions.filter(session=>session.section === section.dataset.prayerSection)
+        .slice().sort((a,b)=>b.prayedAt.localeCompare(a.prayedAt));
+      if(!sessions.length) history.textContent = '还没有祷告记录';
+      sessions.forEach(session=>{
+        const item = document.createElement('article'); item.className = 'prayer-session';
+        const time = document.createElement('time'); time.dateTime = session.prayedAt;
+        // Store New York wall time as entered, without browser timezone conversion.
+        const [date, clock] = session.prayedAt.split('T');
+        const [year, month, day] = date.split('-');
+        time.textContent = `${year}年${Number(month)}月${Number(day)}日 ${clock}（纽约时间）`;
+        const names = document.createElement('p');
+        names.textContent = '参加祷告：' + (session.people.length ? session.people.map(person=>person.name).join('、') : '未记录参加人');
+        const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '删除记录';
+        remove.setAttribute('aria-label', '删除' + time.textContent + '的祷告记录');
+        remove.addEventListener('click', ()=>{
+          if(!confirm('确定删除这次祷告记录？')) return;
+          const latest = load(); latest.prayerSessions = latest.prayerSessions.filter(record=>record.id !== session.id);
+          save(latest); renderNotices();
+        });
+        item.append(time, names, remove); history.appendChild(item);
+      });
     });
     const unassigned = state.prayerPeople.filter(p=>!['columbia','lic','flushing'].includes(p.section));
     const unassignedSection = $('#unassignedPrayer'); unassignedSection.hidden = !unassigned.length;
@@ -1092,8 +1141,42 @@
     });
     input.addEventListener('keydown', e=>{ if((e.metaKey || e.ctrlKey) && e.key === 'Enter') form.requestSubmit(); });
   });
+  function newYorkPrayerTime(){
+    const parts = new Intl.DateTimeFormat('en-US', {timeZone:'America/New_York', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map(part=>[part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`;
+  }
   document.querySelectorAll('[data-prayer-section]').forEach(section=>{
-    section.querySelector('form').addEventListener('submit', e=>{
+    const form = document.createElement('form'); form.className = 'prayer-session-form';
+    const label = document.createElement('label'); label.textContent = '祷告日期和时间（纽约时间）';
+    const dateInput = document.createElement('input'); dateInput.type = 'datetime-local'; dateInput.required = true;
+    dateInput.value = newYorkPrayerTime(); label.appendChild(dateInput);
+    const button = document.createElement('button'); button.type = 'submit'; button.textContent = '保存本次祷告';
+    const attendees = document.createElement('fieldset'); attendees.className = 'prayer-attendees';
+    const legend = document.createElement('legend'); legend.textContent = '本次实际参加的人（请勾选）';
+    const options = document.createElement('div'); options.className = 'prayer-attendee-options';
+    attendees.append(legend, options);
+    form.append(label, attendees, button);
+    const hint = document.createElement('p'); hint.className = 'muted'; hint.textContent = '仅保存本次勾选的人和所选时间；保存后清空勾选，历史记录不受影响。';
+    const history = document.createElement('div'); history.className = 'prayer-history'; history.setAttribute('aria-live', 'polite');
+    section.append(form, hint, history);
+    form.addEventListener('submit', e=>{
+      e.preventDefault(); if(!form.reportValidity()) return;
+      const state = load(); const location = section.dataset.prayerSection;
+      if(state.prayerSessions.some(session=>session.section === location && session.prayedAt === dateInput.value)){
+        alert('这个时间的祷告已经记录了'); return;
+      }
+      const selected = new Set(Array.from(options.querySelectorAll('input:checked'), input=>input.value));
+      const people = state.prayerPeople.filter(person=>person.section === location && selected.has(person.id))
+        .map(person=>({id:person.id, name:person.name}));
+      if(!people.length){ alert('请勾选本次实际参加祷告的人'); return; }
+      state.prayerSessions.push({id:'ps_' + crypto.randomUUID(), section:location, prayedAt:dateInput.value,
+        people,
+        createdAt:new Date().toISOString()});
+      save(state); options.querySelectorAll('input').forEach(input=>{ input.checked = false; });
+      dateInput.value = newYorkPrayerTime(); renderNotices();
+    });
+    section.querySelector('.prayer-form').addEventListener('submit', e=>{
       e.preventDefault(); const input = e.currentTarget.querySelector('input'); const name = normalizedName(input.value); if(!name) return;
       const state = load(); const location = section.dataset.prayerSection;
       if(state.prayerPeople.some(p=>p.section === location && p.name.toLowerCase() === name.toLowerCase())){ alert('这个名字已经添加了'); return; }
