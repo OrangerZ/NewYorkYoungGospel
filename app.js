@@ -1130,9 +1130,9 @@ function enableItemActions(){
   let accessClickCount = 0;
   let lastAccessClick = 0;
   $('#brandAccessBtn').addEventListener('click', ()=>{
-    if(tabsUnlocked) return;
+    if(tabsUnlocked || $('#tabAccessDialog').open) return;
     const now = Date.now();
-    accessClickCount = now - lastAccessClick < 1000 ? accessClickCount + 1 : 1;
+    accessClickCount = now - lastAccessClick < 2000 ? accessClickCount + 1 : 1;
     lastAccessClick = now;
     if(accessClickCount < 5) return;
     accessClickCount = 0;
@@ -1141,6 +1141,8 @@ function enableItemActions(){
   });
   $('#cancelTabAccessBtn').addEventListener('click', ()=>$('#tabAccessDialog').close());
   $('#tabAccessDialog').addEventListener('close', ()=>{
+    accessClickCount = 0;
+    lastAccessClick = 0;
     $('#tabAccessCode').value = '';
     $('#tabAccessCode').removeAttribute('aria-invalid');
     $('#tabAccessMessage').textContent = '';
